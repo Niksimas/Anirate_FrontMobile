@@ -32,15 +32,15 @@
 
 ## Фаза 2 — API + Auth Layer
 
-- [ ] **2.1** Создать TypeScript типы `src/types/index.ts` на основе `openapi.json`
-- [ ] **2.2** Создать Axios instance `src/api/axios.ts` с baseURL и Bearer interceptor
-- [ ] **2.3** Добавить interceptor для автообновления токена (refresh + retry 401)
-- [ ] **2.4** Создать `src/stores/auth.ts` (Pinia): login, logout, хранение токенов, me()
-- [ ] **2.5** Создать `src/api/auth.ts` — googleAuth, refresh, me, logout
-- [ ] **2.6** Создать `src/api/anime.ts` — getAll, getById, search, suggest, stats
-- [ ] **2.7** Создать `src/api/tracking.ts` — add, update, remove, getMyTracking, getMyStats, getUserTracking
-- [ ] **2.8** Создать `src/api/friends.ts` — request, incoming, accept, decline, list, remove
-- [ ] **2.9** Создать `src/api/lists.ts` — все CRUD операции + members + anime + ratings
+- [x] **2.1** Создать TypeScript типы `src/types/index.ts` на основе `openapi.json`
+- [x] **2.2** Создать Axios instance `src/api/axios.ts` с baseURL и Bearer interceptor
+- [x] **2.3** Добавить interceptor для автообновления токена (refresh + retry 401)
+- [x] **2.4** Создать `src/stores/auth.ts` (Pinia): login, logout, хранение токенов, me()
+- [x] **2.5** Создать `src/api/auth.ts` — googleAuth, refresh, me, logout
+- [x] **2.6** Создать `src/api/anime.ts` — getAll, getById, search, suggest, stats
+- [x] **2.7** Создать `src/api/tracking.ts` — add, update, remove, getMyTracking, getMyStats, getUserTracking
+- [x] **2.8** Создать `src/api/friends.ts` — request, incoming, accept, decline, list, remove
+- [x] **2.9** Создать `src/api/lists.ts` — все CRUD операции + members + anime + ratings
 
 ## Фаза 3 — Auth Flow
 
@@ -108,7 +108,7 @@
 | Фаза | Статус |
 |------|--------|
 | 1 — Инициализация | ✅ Выполнена |
-| 2 — API Layer | ⬜ Не начата |
+| 2 — API Layer | ✅ Выполнена |
 | 3 — Auth Flow | ⬜ Не начата |
 | 4 — Поиск | ⬜ Не начата |
 | 5 — Экран аниме | ⬜ Не начата |
