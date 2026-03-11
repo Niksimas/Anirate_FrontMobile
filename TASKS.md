@@ -1,0 +1,119 @@
+# Anirate — Мобильное приложение (Ionic + Vue 3 + TypeScript)
+
+## Контекст проекта
+
+- **Стек:** Ionic 8, Vue 3, TypeScript, Composition API, Pinia, Vue Router, Axios, Capacitor
+- **Платформы:** iOS + Android (Capacitor)
+- **Google Auth:** `@codetrix-studio/capacitor-google-auth`
+- **Хранение токенов:** `@capacitor/preferences`
+- **Бэкенд:** openapi.json в корне репозитория
+- **Дизайн:** Figma файл `YIJvxiL1pPstIu6G2RzLiC` (токен в `.env`)
+- **Базовый URL API:** задать в `src/api/axios.ts`
+
+## Соглашения
+
+- Коммит после каждой выполненной задачи
+- Один файл = один экран во `src/views/`
+- Переиспользуемые компоненты → `src/components/`
+- API клиенты → `src/api/` (по одному файлу на ресурс)
+- Pinia stores → `src/stores/`
+- TypeScript типы → `src/types/`
+- Vue composables → `src/composables/`
+
+---
+
+## Фаза 1 — Инициализация проекта
+
+- [ ] **1.1** `ionic create anirate --type vue` в текущей папке, выбрать tabs template
+- [ ] **1.2** Установить зависимости: `axios`, `pinia`, `@codetrix-studio/capacitor-google-auth`, `@capacitor/preferences`
+- [ ] **1.3** Добавить платформы: `npx cap add ios`, `npx cap add android`
+- [ ] **1.4** Настроить `capacitor.config.ts` (appId: `com.anirate.app`, appName: `Anirate`)
+- [ ] **1.5** Создать структуру папок: `src/api`, `src/stores`, `src/types`, `src/composables`
+
+## Фаза 2 — API + Auth Layer
+
+- [ ] **2.1** Создать TypeScript типы `src/types/index.ts` на основе `openapi.json`
+- [ ] **2.2** Создать Axios instance `src/api/axios.ts` с baseURL и Bearer interceptor
+- [ ] **2.3** Добавить interceptor для автообновления токена (refresh + retry 401)
+- [ ] **2.4** Создать `src/stores/auth.ts` (Pinia): login, logout, хранение токенов, me()
+- [ ] **2.5** Создать `src/api/auth.ts` — googleAuth, refresh, me, logout
+- [ ] **2.6** Создать `src/api/anime.ts` — getAll, getById, search, suggest, stats
+- [ ] **2.7** Создать `src/api/tracking.ts` — add, update, remove, getMyTracking, getMyStats, getUserTracking
+- [ ] **2.8** Создать `src/api/friends.ts` — request, incoming, accept, decline, list, remove
+- [ ] **2.9** Создать `src/api/lists.ts` — все CRUD операции + members + anime + ratings
+
+## Фаза 3 — Auth Flow
+
+- [ ] **3.1** Экран **Загрузка** (`SplashView.vue`) — лого, проверка токена → редирект
+- [ ] **3.2** Экран **Онбординг** (`OnboardingView.vue`) — слайды Swiper с презентацией
+- [ ] **3.3** Экран **Вход** (`LoginView.vue`) — кнопка Google Sign In через Capacitor Google Auth
+- [ ] **3.4** Экран **Первичная настройка** (`SetupView.vue`) — имя, фото, публичность профиля
+- [ ] **3.5** Navigation guards в `src/router/index.ts` — защита роутов по токену
+
+## Фаза 4 — Поиск аниме
+
+- [ ] **4.1** Экран **Поиск** (`SearchView.vue`) — поле поиска, автодополнение, сетка результатов
+- [ ] **4.2** Компонент `AnimeCard.vue` — постер, название, сезон/год
+- [ ] **4.3** Sheet-модал **Фильтры** (`SearchFiltersModal.vue`) — год, сезон, применить
+- [ ] **4.4** Состояние «Не найдено» в SearchView
+
+## Фаза 5 — Экран аниме
+
+- [ ] **5.1** Экран **Аниме** (`AnimeView.vue`) — постер, название, кнопки трекинга
+- [ ] **5.2** Sheet **Трекинг** (`TrackingSheet.vue`) — статус planned/watching/completed, оценка 1–10
+- [ ] **5.3** Блок **В списках у друзей** на странице аниме
+
+## Фаза 6 — Мои аниме
+
+- [ ] **6.1** Экран **Мои аниме** (`MyAnimeView.vue`) — сегменты: Все / В планах / Смотрю / Просмотрено
+- [ ] **6.2** Быстрые действия на карточке — изменить статус, удалить трекинг
+- [ ] **6.3** Pull-to-refresh и бесконечный скролл (pagination)
+
+## Фаза 7 — Друзья
+
+- [ ] **7.1** Экран **Друзья** (`FriendsView.vue`) — список + пустое состояние
+- [ ] **7.2** Экран **Поиск друзей** (`FriendSearchView.vue`) — поиск по имени, отправка заявки
+- [ ] **7.3** Экран **Входящие заявки** (`FriendRequestsView.vue`) — принять / отклонить
+- [ ] **7.4** Экран **Отправленные заявки** (`FriendSentView.vue`)
+- [ ] **7.5** Экран **Профиль друга** (`UserView.vue`) — открытый (с трекингом) и закрытый
+
+## Фаза 8 — Профиль и настройки
+
+- [ ] **8.1** Экран **Мой профиль** (`ProfileView.vue`) — аватар, имя, статистика
+- [ ] **8.2** Экран **Настройки** (`SettingsView.vue`) — имя, фото, публичность, выход
+
+## Фаза 9 — Совместные списки
+
+- [ ] **9.1** Экран **Мои списки** (`ListsView.vue`) — список всех совместных списков
+- [ ] **9.2** Экран **Создать список** (`CreateListView.vue`) — название, описание
+- [ ] **9.3** Экран **Совместный список** (`ListDetailView.vue`) — аниме с оценками участников
+- [ ] **9.4** Экран **Участники** (`ListMembersView.vue`) — профили + кик для владельца
+- [ ] **9.5** Sheet **Добавить аниме в список** (`AddAnimeSheet.vue`) — поиск + добавление
+- [ ] **9.6** Sheet **Оценить аниме** (`RateAnimeSheet.vue`) — оценка + комментарий
+- [ ] **9.7** Инвайт-код — показать, скопировать, перегенерировать
+
+## Фаза 10 — Полировка
+
+- [ ] **10.1** Тёмная / светлая тема — Ionic CSS переменные + переключатель в настройках
+- [ ] **10.2** Глобальный toast-сервис для ошибок и успешных действий
+- [ ] **10.3** Skeleton-загрузки (`IonSkeletonText`) вместо спиннеров
+- [ ] **10.4** Pull-to-refresh на всех списках (где не добавлено в фазах выше)
+- [ ] **10.5** Бесконечный скролл на поиске (где не добавлено выше)
+- [ ] **10.6** Обработка офлайн-состояния
+
+---
+
+## Прогресс
+
+| Фаза | Статус |
+|------|--------|
+| 1 — Инициализация | ⬜ Не начата |
+| 2 — API Layer | ⬜ Не начата |
+| 3 — Auth Flow | ⬜ Не начата |
+| 4 — Поиск | ⬜ Не начата |
+| 5 — Экран аниме | ⬜ Не начата |
+| 6 — Мои аниме | ⬜ Не начата |
+| 7 — Друзья | ⬜ Не начата |
+| 8 — Профиль | ⬜ Не начата |
+| 9 — Совместные списки | ⬜ Не начата |
+| 10 — Полировка | ⬜ Не начата |
