@@ -24,11 +24,11 @@
 
 ## Фаза 1 — Инициализация проекта
 
-- [ ] **1.1** `ionic create anirate --type vue` в текущей папке, выбрать tabs template
-- [ ] **1.2** Установить зависимости: `axios`, `pinia`, `@codetrix-studio/capacitor-google-auth`, `@capacitor/preferences`
-- [ ] **1.3** Добавить платформы: `npx cap add ios`, `npx cap add android`
-- [ ] **1.4** Настроить `capacitor.config.ts` (appId: `com.anirate.app`, appName: `Anirate`)
-- [ ] **1.5** Создать структуру папок: `src/api`, `src/stores`, `src/types`, `src/composables`
+- [x] **1.1** `ionic create anirate --type vue` в текущей папке, выбрать tabs template
+- [x] **1.2** Установить зависимости: `axios`, `pinia`, `@codetrix-studio/capacitor-google-auth`, `@capacitor/preferences`
+- [x] **1.3** Добавить платформы: `npx cap add ios`, `npx cap add android`
+- [x] **1.4** Настроить `capacitor.config.ts` (appId: `com.anirate.app`, appName: `Anirate`)
+- [x] **1.5** Создать структуру папок: `src/api`, `src/stores`, `src/types`, `src/composables`
 
 ## Фаза 2 — API + Auth Layer
 
@@ -107,7 +107,7 @@
 
 | Фаза | Статус |
 |------|--------|
-| 1 — Инициализация | ⬜ Не начата |
+| 1 — Инициализация | ✅ Выполнена |
 | 2 — API Layer | ⬜ Не начата |
 | 3 — Auth Flow | ⬜ Не начата |
 | 4 — Поиск | ⬜ Не начата |
