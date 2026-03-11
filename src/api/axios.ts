@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { Preferences } from '@capacitor/preferences';
 
-export const BASE_URL = 'http://localhost:8000';
+// 10.0.2.2 — стандартный адрес хоста ПК из Android-эмулятора (AVD)
+export const BASE_URL = 'http://10.0.2.2:8000';
 
 export const api = axios.create({
   baseURL: BASE_URL,
