@@ -30,3 +30,8 @@ npm-debug.log*
 /platforms
 /plugins
 /www
+
+# Sensitive files
+.env
+.claude/settings.json
+conf/client_secret_*.json
