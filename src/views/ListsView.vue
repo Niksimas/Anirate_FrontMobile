@@ -156,14 +156,28 @@ async function joinByCode() {
 </script>
 
 <style scoped>
-.list-item { --border-radius: 10px; margin-bottom: 8px; }
-.list-icon-wrap {
-  width: 44px; height: 44px; border-radius: 10px;
-  background: var(--ion-color-primary-tint); display: flex;
-  align-items: center; justify-content: center; margin-right: 4px;
-  color: var(--ion-color-primary); font-size: 22px;
+ion-header ion-toolbar { --background: #1E1E1E; --border-width: 0; }
+ion-content { --background: #1E1E1E; }
+ion-list { background: transparent; padding: 8px 16px; }
+ion-item {
+  --background: #2D2D3A;
+  --border-radius: 12px;
+  --inner-border-width: 0;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  --color: #FBF9F6;
 }
-.empty-state { display: flex; flex-direction: column; align-items: center; padding: 60px 24px; gap: 12px; text-align: center; }
-.empty-icon { font-size: 56px; color: var(--ion-color-medium); }
-.join-section { padding: 0 16px 24px; }
+ion-item ion-label h3 { font-weight: 600; color: #FBF9F6; }
+ion-item ion-label p { color: #697289; }
+ion-fab-button {
+  --background: linear-gradient(135deg, #A7B8D9 0%, #FF9E9E 100%);
+  --color: #1E1E1E;
+  --box-shadow: none;
+}
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 80px 24px; gap: 12px; text-align: center;
+}
+.empty-icon { font-size: 56px; color: #697289; }
+.empty-state p { color: #FBF9F6; margin: 0; }
 </style>

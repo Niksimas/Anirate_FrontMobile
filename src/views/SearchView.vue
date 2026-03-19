@@ -1,46 +1,106 @@
 <template>
   <ion-page>
-    <ion-header>
-      <ion-toolbar>
+    <ion-content class="search-content">
+      <ion-refresher slot="fixed" @ion-refresh="onRefresh($event)">
+        <ion-refresher-content />
+      </ion-refresher>
+
+      <!-- Search bar -->
+      <div class="searchbar-wrap">
         <ion-searchbar
           v-model="query"
-          placeholder="Поиск аниме..."
+          placeholder="Поиск"
           :debounce="400"
-          show-clear-button="focus"
+          show-clear-button="always"
+          class="main-searchbar"
           @ion-input="onInput"
           @ion-clear="onClear"
         />
-        <ion-buttons slot="end">
-          <ion-button @click="openFilters">
-            <ion-icon slot="icon-only" :icon="optionsOutline" />
-          </ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-      <!-- Active filters chips -->
-      <ion-toolbar v-if="activeFilters" class="filters-bar">
-        <div class="filter-chips">
-          <ion-chip v-if="filterYear" @click="openFilters">
-            <ion-label>{{ filterYear }}</ion-label>
-            <ion-icon :icon="closeCircle" @click.stop="clearYear" />
-          </ion-chip>
-          <ion-chip v-if="filterSeason" @click="openFilters">
-            <ion-label>{{ seasonLabel(filterSeason) }}</ion-label>
-            <ion-icon :icon="closeCircle" @click.stop="clearSeason" />
-          </ion-chip>
-        </div>
-      </ion-toolbar>
-    </ion-header>
+      </div>
 
-    <ion-content>
+      <!-- Filter row -->
+      <div class="filter-row">
+        <button
+          class="filter-pill"
+          :class="{ 'filter-pill--active': hasFilters || filtersOpen }"
+          @click="filtersOpen = !filtersOpen"
+        >
+          Фильтры{{ activeFilterCount ? ` (${activeFilterCount})` : '' }}
+        </button>
+        <button v-if="hasFilters" class="reset-pill" @click="resetFilters">
+          Сбросить фильтры
+        </button>
+      </div>
+
+      <!-- Inline filter panel -->
+      <transition name="filter-drop">
+        <div v-if="filtersOpen" class="filter-panel">
+          <h3 class="filter-panel__title">Фильтры</h3>
+
+          <div class="filter-section">
+            <p class="filter-section__label">Год выпуска</p>
+            <div class="year-row">
+              <div class="year-input-wrap">
+                <input
+                  v-model.number="draftYearFrom"
+                  type="number"
+                  placeholder="ГГГГ"
+                  class="year-input"
+                  min="1960"
+                  :max="currentYear"
+                />
+                <ion-icon :icon="calendarOutline" class="year-input-icon" />
+              </div>
+              <div class="year-input-wrap">
+                <input
+                  v-model.number="draftYearTo"
+                  type="number"
+                  placeholder="ГГГГ"
+                  class="year-input"
+                  min="1960"
+                  :max="currentYear"
+                />
+                <ion-icon :icon="calendarOutline" class="year-input-icon" />
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-selector">
+            <span class="filter-selector__label">Жанры</span>
+            <ion-icon :icon="chevronDownOutline" class="filter-selector__arrow" />
+          </div>
+          <div class="filter-selector">
+            <span class="filter-selector__label">Тип</span>
+            <ion-icon :icon="chevronDownOutline" class="filter-selector__arrow" />
+          </div>
+          <div class="filter-selector">
+            <span class="filter-selector__label">Статус</span>
+            <ion-icon :icon="chevronDownOutline" class="filter-selector__arrow" />
+          </div>
+          <div class="filter-selector" style="margin-bottom: 16px">
+            <span class="filter-selector__label">Количество серий</span>
+            <ion-icon :icon="chevronDownOutline" class="filter-selector__arrow" />
+          </div>
+
+          <div class="filter-panel__actions">
+            <button class="panel-btn panel-btn--apply" @click="applyFilters">Применить</button>
+            <button class="panel-btn panel-btn--reset" @click="resetFilters">Очистить выбор</button>
+          </div>
+        </div>
+      </transition>
+
+      <!-- Section title when filters active -->
+      <p v-if="hasFilters && !loading" class="section-title">Результат поиска</p>
+
       <!-- Loading skeleton -->
       <div v-if="loading" class="anime-grid">
-        <div v-for="i in 12" :key="i" class="anime-card-skeleton">
+        <div v-for="i in 10" :key="i" class="skeleton-card">
           <ion-skeleton-text animated class="skeleton-poster" />
           <ion-skeleton-text animated class="skeleton-title" />
         </div>
       </div>
 
-      <!-- Results grid -->
+      <!-- Results -->
       <div v-else-if="results.length" class="anime-grid">
         <AnimeCard
           v-for="anime in results"
@@ -50,14 +110,14 @@
         />
       </div>
 
-      <!-- Empty state -->
+      <!-- Empty search state -->
       <div v-else-if="searched" class="empty-state">
         <ion-icon :icon="searchOutline" class="empty-icon" />
         <p>Ничего не найдено</p>
         <p class="empty-hint">Попробуй другой запрос или убери фильтры</p>
       </div>
 
-      <!-- Default state: initial browse -->
+      <!-- Browse / default -->
       <div v-else class="anime-grid">
         <AnimeCard
           v-for="anime in browse"
@@ -71,16 +131,6 @@
         <ion-infinite-scroll-content />
       </ion-infinite-scroll>
     </ion-content>
-
-    <!-- Filters modal -->
-    <ion-modal ref="filtersModal" :initial-breakpoint="0.5" :breakpoints="[0, 0.5, 1]">
-      <SearchFiltersModal
-        :year="filterYear"
-        :season="filterSeason"
-        @apply="applyFilters"
-        @close="filtersModal?.$el.dismiss()"
-      />
-    </ion-modal>
   </ion-page>
 </template>
 
@@ -88,52 +138,55 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import {
-  IonPage, IonHeader, IonToolbar, IonSearchbar, IonButtons, IonButton, IonIcon,
-  IonContent, IonChip, IonLabel, IonSkeletonText, IonModal,
+  IonPage, IonContent, IonIcon,
+  IonRefresher, IonRefresherContent, IonSearchbar, IonSkeletonText,
   IonInfiniteScroll, IonInfiniteScrollContent,
 } from '@ionic/vue';
-import { optionsOutline, searchOutline, closeCircle } from 'ionicons/icons';
+import { searchOutline, calendarOutline, chevronDownOutline } from 'ionicons/icons';
 import AnimeCard from '@/components/AnimeCard.vue';
-import SearchFiltersModal from '@/components/SearchFiltersModal.vue';
 import { animeApi } from '@/api/anime';
 import type { AnimeResponse } from '@/types';
-import type { InfiniteScrollCustomEvent } from '@ionic/vue';
+import type { InfiniteScrollCustomEvent, RefresherCustomEvent } from '@ionic/vue';
 
 const router = useRouter();
 const query = ref('');
 const results = ref<AnimeResponse[]>([]);
 const browse = ref<AnimeResponse[]>([]);
 const loading = ref(false);
+const loadingMore = ref(false);
 const searched = ref(false);
-const filterYear = ref<number | null>(null);
-const filterSeason = ref<string | null>(null);
-const filtersModal = ref();
 const offset = ref(0);
 const LIMIT = 30;
 
-const activeFilters = computed(() => filterYear.value || filterSeason.value);
+// Filter state
+const filtersOpen = ref(false);
+const filterYear = ref<number | null>(null);
+const draftYearFrom = ref<number | null>(null);
+const draftYearTo = ref<number | null>(null);
+const currentYear = new Date().getFullYear();
 
-const SEASON_LABELS: Record<string, string> = {
-  winter: 'Зима', spring: 'Весна', summer: 'Лето', fall: 'Осень',
-};
-function seasonLabel(s: string) { return SEASON_LABELS[s] ?? s; }
+const hasFilters = computed(() => !!filterYear.value);
+const activeFilterCount = computed(() => (filterYear.value ? 1 : 0));
 
 onMounted(loadBrowse);
 
 async function loadBrowse() {
+  loading.value = true;
   try {
-    const { data } = await animeApi.getAll({ limit: LIMIT, offset: 0 });
+    const { data } = await animeApi.getAll({
+      limit: LIMIT, offset: 0,
+      year: filterYear.value ?? undefined,
+    });
     browse.value = data;
   } catch (e) {
     console.error(e);
+  } finally {
+    loading.value = false;
   }
 }
 
 async function onInput() {
-  if (!query.value.trim()) {
-    onClear();
-    return;
-  }
+  if (!query.value.trim()) { onClear(); return; }
   await runSearch(true);
 }
 
@@ -148,8 +201,10 @@ async function runSearch(reset = false) {
   if (reset) {
     offset.value = 0;
     results.value = [];
+    loading.value = true;
+  } else {
+    loadingMore.value = true;
   }
-  loading.value = true;
   searched.value = true;
   try {
     const { data } = await animeApi.search({
@@ -162,6 +217,7 @@ async function runSearch(reset = false) {
     console.error(e);
   } finally {
     loading.value = false;
+    loadingMore.value = false;
   }
 }
 
@@ -173,62 +229,258 @@ async function loadMore(ev: InfiniteScrollCustomEvent) {
     const { data } = await animeApi.getAll({
       limit: LIMIT, offset: offset.value,
       year: filterYear.value ?? undefined,
-      season: filterSeason.value ?? undefined,
     });
     browse.value = [...browse.value, ...data];
   }
   ev.target.complete();
 }
 
-function openFilters() { filtersModal.value?.$el.present(); }
-function clearYear() { filterYear.value = null; applyFilters({ year: null, season: filterSeason.value }); }
-function clearSeason() { filterSeason.value = null; applyFilters({ year: filterYear.value, season: null }); }
+async function onRefresh(ev: RefresherCustomEvent) {
+  await loadBrowse();
+  ev.detail.complete();
+}
 
-async function applyFilters({ year, season }: { year: number | null; season: string | null }) {
-  filterYear.value = year;
-  filterSeason.value = season;
-  filtersModal.value?.$el.dismiss();
+async function applyFilters() {
+  filterYear.value = draftYearFrom.value;
+  filtersOpen.value = false;
   browse.value = [];
   offset.value = 0;
-  const { data } = await animeApi.getAll({
-    limit: LIMIT, offset: 0,
-    year: year ?? undefined,
-    season: season ?? undefined,
-  });
-  browse.value = data;
+  await loadBrowse();
+}
+
+function resetFilters() {
+  filterYear.value = null;
+  draftYearFrom.value = null;
+  draftYearTo.value = null;
+  filtersOpen.value = false;
+  browse.value = [];
+  offset.value = 0;
+  loadBrowse();
 }
 
 function goToAnime(id: number) { router.push(`/anime/${id}`); }
 </script>
 
 <style scoped>
+.search-content {
+  --background: #111111;
+}
+
+/* Search bar */
+.searchbar-wrap {
+  padding: calc(var(--ion-safe-area-top, 0px) + 8px) 12px 4px;
+}
+
+.main-searchbar {
+  --background: #2A2A2A;
+  --color: #FFFFFF;
+  --placeholder-color: rgba(255,255,255,0.4);
+  --icon-color: rgba(255,255,255,0.4);
+  --clear-button-color: rgba(255,255,255,0.4);
+  --border-radius: 12px;
+  --box-shadow: none;
+  padding: 0;
+  height: 44px;
+}
+
+/* Filter row */
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px 8px;
+}
+
+.filter-pill {
+  padding: 7px 18px;
+  border-radius: 20px;
+  border: none;
+  background: #FF9E9E;
+  color: #1A1A1A;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.filter-pill--active {
+  background: #FF9E9E;
+}
+
+.reset-pill {
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: none;
+  background: #A7B8D9;
+  color: #1A1A1A;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Filter panel */
+.filter-panel {
+  margin: 0 12px 12px;
+  background: #2D2D3A;
+  border-radius: 16px;
+  padding: 20px 16px 16px;
+}
+
+.filter-panel__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0 0 16px;
+}
+
+.filter-section__label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.year-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.year-input-wrap {
+  flex: 1;
+  position: relative;
+}
+
+.year-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #3A3A4A;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 36px 12px 14px;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.year-input::placeholder { color: rgba(255,255,255,0.35); }
+
+.year-input-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  color: rgba(255,255,255,0.4);
+  pointer-events: none;
+}
+
+.filter-selector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #3A3A4A;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.filter-selector__label {
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+}
+
+.filter-selector__arrow {
+  font-size: 16px;
+  color: rgba(255,255,255,0.4);
+}
+
+.filter-panel__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.panel-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.panel-btn--apply {
+  background: #5CB85C;
+  color: #FFFFFF;
+}
+
+.panel-btn--reset {
+  background: #FF9E9E;
+  color: #1A1A1A;
+}
+
+/* Section title */
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 4px 16px 12px;
+  letter-spacing: -0.3px;
+}
+
+/* Grid */
 .anime-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  padding: 12px;
+  padding: 8px 16px 16px;
 }
-.anime-card-skeleton .skeleton-poster {
+
+.skeleton-card .skeleton-poster {
   aspect-ratio: 2/3;
-  border-radius: 10px;
+  border-radius: 12px;
   width: 100%;
+  --background: #2D2D3A;
 }
-.anime-card-skeleton .skeleton-title {
+
+.skeleton-card .skeleton-title {
   height: 14px;
   border-radius: 4px;
-  margin-top: 4px;
+  margin-top: 6px;
+  --background: #2D2D3A;
 }
+
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 24px;
+  padding: 80px 24px;
   text-align: center;
   gap: 8px;
 }
-.empty-icon { font-size: 56px; color: var(--ion-color-medium); }
-.empty-hint { font-size: 0.85rem; color: var(--ion-color-medium); margin: 0; }
-.filters-bar { --min-height: 44px; }
-.filter-chips { display: flex; gap: 8px; padding: 4px 12px; }
+
+.empty-icon { font-size: 56px; color: rgba(255,255,255,0.3); }
+.empty-state p { color: #FFFFFF; margin: 0; }
+.empty-hint { font-size: 0.85rem; color: rgba(255,255,255,0.4) !important; }
+
+/* Animation */
+.filter-drop-enter-active,
+.filter-drop-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+  transform-origin: top;
+}
+
+.filter-drop-enter-from,
+.filter-drop-leave-to {
+  opacity: 0;
+  transform: scaleY(0.9);
+}
 </style>

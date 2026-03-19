@@ -1,143 +1,458 @@
 <template>
   <ion-page>
-    <ion-header>
-      <ion-toolbar>
-        <ion-title>Профиль</ion-title>
-        <ion-buttons slot="end">
-          <ion-button router-link="/settings">
-            <ion-icon slot="icon-only" :icon="settingsOutline" />
-          </ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
-
-    <ion-content>
+    <ion-content class="profile-content" :fullscreen="true">
       <ion-refresher slot="fixed" @ion-refresh="refresh($event)">
         <ion-refresher-content />
       </ion-refresher>
 
-      <div v-if="loading" class="profile-header">
-        <ion-skeleton-text animated style="height:80px;width:80px;border-radius:50%;" />
-        <ion-skeleton-text animated style="height:20px;width:140px;margin-top:12px;" />
+      <!-- Top actions -->
+      <div class="top-bar">
+        <div />
+        <ion-button fill="clear" class="more-btn" id="profile-popover-trigger">
+          <ion-icon :icon="ellipsisHorizontal" />
+        </ion-button>
       </div>
 
-      <template v-else>
-        <div class="profile-header">
-          <ion-avatar class="profile-avatar">
-            <img v-if="user?.picture" :src="user.picture" />
-            <ion-icon v-else :icon="personCircleOutline" />
-          </ion-avatar>
-          <h2>{{ user?.full_name ?? 'Без имени' }}</h2>
-          <p class="profile-email">{{ user?.email }}</p>
-          <ion-chip :color="user?.is_public_profile ? 'success' : 'medium'" outline>
-            <ion-label>{{ user?.is_public_profile ? 'Публичный' : 'Закрытый' }}</ion-label>
-          </ion-chip>
-        </div>
-
-        <!-- Stats -->
-        <div v-if="stats" class="stats-grid">
-          <div class="stat-item">
-            <span class="stat-value">{{ stats.total }}</span>
-            <span class="stat-label">Всего</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value">{{ stats.watching }}</span>
-            <span class="stat-label">Смотрю</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value">{{ stats.completed }}</span>
-            <span class="stat-label">Просмотрено</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value">{{ stats.planned }}</span>
-            <span class="stat-label">В планах</span>
-          </div>
-          <div class="stat-item" v-if="stats.average_score">
-            <span class="stat-value">{{ stats.average_score?.toFixed(1) }}</span>
-            <span class="stat-label">Ср. оценка</span>
-          </div>
-        </div>
-
-        <!-- Navigation -->
-        <ion-list lines="none" class="ion-margin-top">
-          <ion-item button router-link="/tabs/my-anime">
-            <ion-icon slot="start" :icon="listOutline" />
-            <ion-label>Мои аниме</ion-label>
-            <ion-icon slot="end" :icon="chevronForwardOutline" />
+      <ion-popover trigger="profile-popover-trigger" :dismiss-on-select="true">
+        <ion-list lines="none">
+          <ion-item button @click="router.push('/settings')">
+            <ion-label>Настройки профиля</ion-label>
           </ion-item>
-          <ion-item button router-link="/lists">
-            <ion-icon slot="start" :icon="albumsOutline" />
-            <ion-label>Мои списки</ion-label>
-            <ion-icon slot="end" :icon="chevronForwardOutline" />
-          </ion-item>
-          <ion-item button router-link="/tabs/friends">
-            <ion-icon slot="start" :icon="peopleOutline" />
-            <ion-label>Друзья</ion-label>
-            <ion-icon slot="end" :icon="chevronForwardOutline" />
+          <ion-item button>
+            <ion-label>Поддержка</ion-label>
           </ion-item>
         </ion-list>
+      </ion-popover>
+
+      <template v-if="loading">
+        <div class="skeleton-header">
+          <ion-skeleton-text animated style="width:80px;height:80px;border-radius:50%;margin:0 auto;" />
+          <ion-skeleton-text animated style="width:140px;height:18px;margin:12px auto 0;" />
+        </div>
       </template>
+
+      <template v-else>
+        <!-- Avatar + name -->
+        <div class="profile-hero">
+          <div class="avatar-circle">
+            <img v-if="user?.picture" :src="user.picture" class="avatar-img" />
+            <ion-icon v-else :icon="cameraOutline" class="avatar-icon" />
+          </div>
+          <h2 class="profile-name">{{ user?.full_name ?? 'Без имени' }}</h2>
+        </div>
+
+        <!-- Просмотрено wide card -->
+        <div class="wide-card lavender-card" @click="router.push('/tabs/my-anime')">
+          <div class="wide-card-text">
+            <span class="wide-card-label">Просмотрено</span>
+            <span class="wide-card-value">{{ stats?.completed ?? 0 }}</span>
+          </div>
+          <ion-icon :icon="sparkles" class="sparkle-icon" />
+        </div>
+
+        <!-- 3 stat mini-cards -->
+        <div class="stat-row" @click="router.push('/tabs/my-anime')">
+          <div class="stat-mini">
+            <span class="stat-mini-label">В планах</span>
+            <span class="stat-mini-value">{{ stats?.planned ?? 0 }}</span>
+          </div>
+          <div class="stat-mini stat-mini--white">
+            <span class="stat-mini-label dark">Смотрю</span>
+            <span class="stat-mini-value dark">{{ stats?.watching ?? 0 }}</span>
+          </div>
+          <div class="stat-mini stat-mini--salmon">
+            <span class="stat-mini-label">Просмотрено</span>
+            <span class="stat-mini-value">{{ stats?.completed ?? 0 }}</span>
+          </div>
+        </div>
+
+        <!-- Recent anime card -->
+        <div class="wide-card salmon-card" @click="router.push('/tabs/my-anime')">
+          <div class="recent-thumbs">
+            <img
+              v-for="(item, i) in recentAnime.slice(0, 3)"
+              :key="item.id"
+              :src="item.anime_image_url"
+              class="recent-thumb"
+              :style="{ left: `${i * 28}px`, zIndex: 3 - i }"
+            />
+          </div>
+          <span class="wide-card-right-label">Последние<br>оценённые аниме</span>
+        </div>
+
+        <!-- Ваши списки -->
+        <div class="section-header">
+          <h3 class="section-title">Ваши списки</h3>
+        </div>
+
+        <div v-if="listsLoading" class="lists-grid">
+          <ion-skeleton-text v-for="i in 4" :key="i" animated style="height:140px;border-radius:16px;" />
+        </div>
+
+        <div v-else class="lists-grid">
+          <!-- Create new list card -->
+          <div class="list-card list-card--create" @click="openCreateList">
+            <span class="create-list-text">Создать<br>новый список</span>
+            <ion-icon :icon="sparkles" class="create-sparkle" />
+          </div>
+
+          <!-- Existing lists -->
+          <div
+            v-for="list in lists"
+            :key="list.id"
+            class="list-card list-card--cover"
+            @click="router.push(`/lists/${list.id}`)"
+          >
+            <div class="list-cover-placeholder" />
+            <div class="list-card-footer">
+              <span class="list-card-name">{{ list.name }}</span>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <div style="height: 32px" />
     </ion-content>
+
+    <!-- Create list modal -->
+    <ion-modal ref="createModal" :initial-breakpoint="0.5" :breakpoints="[0, 0.5]">
+      <ion-page>
+        <ion-header>
+          <ion-toolbar>
+            <ion-title>Новый список</ion-title>
+            <ion-buttons slot="end">
+              <ion-button @click="createModal?.$el.dismiss()">Отмена</ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content class="ion-padding">
+          <ion-list lines="none">
+            <ion-item>
+              <ion-input v-model="newListName" label="Название" label-placement="stacked" placeholder="Название списка" clearInput />
+            </ion-item>
+          </ion-list>
+          <ion-button expand="block" :disabled="!newListName.trim() || creatingList" style="margin-top:16px;" @click="createList">
+            {{ creatingList ? 'Создаём...' : 'Создать' }}
+          </ion-button>
+        </ion-content>
+      </ion-page>
+    </ion-modal>
   </ion-page>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import {
-  IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
-  IonContent, IonRefresher, IonRefresherContent, IonAvatar, IonChip, IonLabel,
-  IonList, IonItem, IonSkeletonText,
+  IonPage, IonContent, IonButton, IonIcon, IonRefresher, IonRefresherContent,
+  IonSkeletonText, IonPopover, IonList, IonItem, IonLabel,
+  IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonInput,
 } from '@ionic/vue';
-import {
-  settingsOutline, personCircleOutline, listOutline, albumsOutline,
-  peopleOutline, chevronForwardOutline,
-} from 'ionicons/icons';
+import { ellipsisHorizontal, cameraOutline, sparkles } from 'ionicons/icons';
 import { useAuthStore } from '@/stores/auth';
 import { trackingApi } from '@/api/tracking';
-import type { TrackingStats } from '@/types';
+import { listsApi } from '@/api/lists';
+import type { TrackingStats, TrackingWithAnime, SharedListBrief } from '@/types';
 import type { RefresherCustomEvent } from '@ionic/vue';
 
+const router = useRouter();
 const authStore = useAuthStore();
+
 const user = ref(authStore.user);
 const stats = ref<TrackingStats | null>(null);
+const recentAnime = ref<TrackingWithAnime[]>([]);
+const lists = ref<SharedListBrief[]>([]);
 const loading = ref(true);
+const listsLoading = ref(true);
+const createModal = ref();
+const newListName = ref('');
+const creatingList = ref(false);
 
 onMounted(load);
 
 async function load() {
   loading.value = true;
+  listsLoading.value = true;
   try {
-    const [userRes, statsRes] = await Promise.allSettled([
+    const [userRes, statsRes, recentRes, listsRes] = await Promise.allSettled([
       authStore.fetchMe(),
       trackingApi.getMyStats(),
+      trackingApi.getMyTracking({ limit: 5, offset: 0 }),
+      listsApi.getMyLists(),
     ]);
     if (userRes.status === 'fulfilled') user.value = userRes.value;
     if (statsRes.status === 'fulfilled') stats.value = statsRes.value.data;
+    if (recentRes.status === 'fulfilled') recentAnime.value = recentRes.value.data;
+    if (listsRes.status === 'fulfilled') lists.value = listsRes.value.data;
   } finally {
     loading.value = false;
+    listsLoading.value = false;
   }
 }
 
-async function refresh(ev: RefresherCustomEvent) { await load(); ev.detail.complete(); }
+async function refresh(ev: RefresherCustomEvent) {
+  await load();
+  ev.detail.complete();
+}
+
+function openCreateList() {
+  newListName.value = '';
+  createModal.value?.$el.present();
+}
+
+async function createList() {
+  creatingList.value = true;
+  try {
+    const { data } = await listsApi.create({ name: newListName.value.trim(), description: null });
+    lists.value.unshift({ id: data.id, name: data.name, owner_id: data.owner_id, member_count: 1, anime_count: 0 });
+    createModal.value?.$el.dismiss();
+    router.push(`/lists/${data.id}`);
+  } finally {
+    creatingList.value = false;
+  }
+}
 </script>
 
 <style scoped>
-.profile-header {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 32px 16px 16px; text-align: center; gap: 8px;
+.profile-content {
+  --background: #1E1E1E;
 }
-.profile-avatar { width: 80px; height: 80px; font-size: 80px; color: var(--ion-color-medium); }
-.profile-header h2 { font-size: 1.4rem; font-weight: 700; margin: 0; }
-.profile-email { color: var(--ion-color-medium); font-size: 0.85rem; margin: 0; }
-.stats-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-  gap: 1px; background: var(--ion-color-step-150); margin: 16px;
-  border-radius: 12px; overflow: hidden;
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 8px 0;
+  padding-top: calc(env(safe-area-inset-top) + 8px);
 }
-.stat-item {
-  display: flex; flex-direction: column; align-items: center; padding: 16px 8px;
-  background: var(--ion-background-color); gap: 4px;
+
+.more-btn {
+  --color: rgba(255,255,255,0.7);
+  --padding-start: 8px;
+  --padding-end: 8px;
+  font-size: 22px;
 }
-.stat-value { font-size: 1.4rem; font-weight: 700; }
-.stat-label { font-size: 0.72rem; color: var(--ion-color-medium); }
+
+.profile-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px 24px;
+}
+
+.avatar-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #4A4A5A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-icon {
+  font-size: 32px;
+  color: rgba(255,255,255,0.6);
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.wide-card {
+  margin: 0 16px 10px;
+  border-radius: 18px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  min-height: 76px;
+}
+
+.lavender-card { background: #A7B8D9; }
+.salmon-card { background: #FF9E9E; }
+
+.wide-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wide-card-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(30,30,30,0.7);
+}
+
+.wide-card-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1E1E1E;
+  line-height: 1;
+}
+
+.sparkle-icon {
+  font-size: 26px;
+  color: rgba(30,30,30,0.45);
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 0 16px 10px;
+  cursor: pointer;
+}
+
+.stat-mini {
+  background: #2D2D3A;
+  border-radius: 14px;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-mini--white { background: #FFFFFF; }
+.stat-mini--salmon { background: #FF9E9E; }
+
+.stat-mini-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.3;
+}
+
+.stat-mini-label.dark { color: rgba(30,30,30,0.6); }
+
+.stat-mini-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1;
+}
+
+.stat-mini-value.dark { color: #1E1E1E; }
+
+.recent-thumbs {
+  position: relative;
+  height: 40px;
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.recent-thumb {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 2px solid #FF9E9E;
+  top: 0;
+}
+
+.wide-card-right-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E1E1E;
+  text-align: right;
+  line-height: 1.4;
+}
+
+.section-header {
+  padding: 8px 16px 4px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.lists-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 8px 16px;
+}
+
+.list-card {
+  border-radius: 16px;
+  overflow: hidden;
+  aspect-ratio: 1;
+  cursor: pointer;
+  position: relative;
+}
+
+.list-card--create {
+  background: #FBF9F6;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.create-list-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E1E1E;
+  line-height: 1.4;
+}
+
+.create-sparkle {
+  font-size: 28px;
+  color: rgba(30,30,30,0.35);
+  align-self: flex-end;
+}
+
+.list-card--cover { background: #2D2D3A; }
+
+.list-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #383848;
+}
+
+.list-card-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 12px 10px;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+}
+
+.list-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.skeleton-header { padding: 16px 24px 24px; }
+
+ion-popover {
+  --background: #2D2D3A;
+  --border-radius: 12px;
+}
+
+ion-popover ion-item {
+  --background: transparent;
+  --color: #FFFFFF;
+  --inner-border-width: 0;
+}
 </style>

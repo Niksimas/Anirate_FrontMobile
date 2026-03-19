@@ -83,10 +83,22 @@ async function decline(req: FriendRequest) {
 </script>
 
 <style scoped>
-.req-actions { display: flex; gap: 4px; }
+ion-header ion-toolbar { --background: #1E1E1E; --border-width: 0; }
+ion-list { background: transparent; padding: 8px 16px; }
+ion-item {
+  --background: #2D2D3A;
+  --border-radius: 12px;
+  --inner-border-width: 0;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  --color: #FBF9F6;
+}
+ion-item ion-label h3 { color: #FBF9F6; font-weight: 600; }
+ion-item ion-label p { color: #697289; }
 .empty-state {
   display: flex; flex-direction: column; align-items: center;
-  padding: 60px 24px; gap: 12px; text-align: center;
+  justify-content: center; padding: 80px 24px; gap: 8px; text-align: center;
 }
-.empty-icon { font-size: 56px; color: var(--ion-color-success); }
+.empty-icon { font-size: 56px; color: #697289; }
+.empty-state p { color: #FBF9F6; margin: 0; }
 </style>

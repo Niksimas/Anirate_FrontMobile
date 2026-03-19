@@ -1,26 +1,34 @@
 <template>
   <ion-page>
-    <ion-content :fullscreen="true">
+    <ion-content :fullscreen="true" class="onb-content">
       <swiper
         :modules="swiperModules"
-        :pagination="{ clickable: true }"
-        class="onboarding-swiper"
+        :autoplay="{ delay: 2500, disableOnInteraction: false }"
+        class="onb-swiper"
         @swiper="onSwiper"
+        @slideChange="onSlideChange"
       >
-        <swiper-slide v-for="(slide, i) in slides" :key="i" class="onboarding-slide">
-          <div class="slide-inner">
-            <ion-icon :icon="slide.icon" class="slide-icon" />
-            <h2>{{ slide.title }}</h2>
-            <p>{{ slide.description }}</p>
+        <swiper-slide v-for="(slide, i) in slides" :key="i" class="onb-slide">
+          <div class="slide-bg" :style="{ background: slide.bg }" />
+          <div class="slide-overlay" />
+          <div class="slide-logo">
+            <img src="/logo.png" alt="Anirate" class="slide-logo-img" />
+          </div>
+          <div class="slide-bottom">
+            <p class="slide-text">{{ slide.text }}</p>
           </div>
         </swiper-slide>
       </swiper>
 
-      <div class="onboarding-footer">
-        <ion-button expand="block" @click="handleContinue">
-          {{ isLastSlide ? 'Начать' : 'Далее' }}
-        </ion-button>
-        <ion-button fill="clear" size="small" @click="skip">Пропустить</ion-button>
+      <div class="onb-footer">
+        <div class="onb-dots">
+          <span
+            v-for="(_, i) in slides"
+            :key="i"
+            class="dot"
+            :class="{ active: i === activeIndex }"
+          />
+        </div>
       </div>
     </ion-content>
   </ion-page>
@@ -29,93 +37,139 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { IonPage, IonContent, IonButton, IonIcon } from '@ionic/vue';
+import { IonPage, IonContent } from '@ionic/vue';
 import { Swiper, SwiperSlide } from 'swiper/vue';
-import { Pagination } from 'swiper/modules';
+import { Autoplay } from 'swiper/modules';
+import { Preferences } from '@capacitor/preferences';
 import type { Swiper as SwiperInstance } from 'swiper';
-import { searchOutline, listOutline, peopleOutline } from 'ionicons/icons';
 import 'swiper/css';
-import 'swiper/css/pagination';
 
 const router = useRouter();
-const swiperModules = [Pagination];
+const swiperModules = [Autoplay];
 const swiperInstance = ref<SwiperInstance | null>(null);
-const isLastSlide = ref(false);
+const activeIndex = ref(0);
 
 const slides = [
   {
-    icon: searchOutline,
-    title: 'Открывай аниме',
-    description: 'Ищи аниме по названию, фильтруй по году и сезону.',
+    bg: 'linear-gradient(180deg, #2D2D3A 0%, #1E1E1E 100%)',
+    text: 'Открывай новые аниме и веди свой список',
   },
   {
-    icon: listOutline,
-    title: 'Веди список',
-    description: 'Отмечай что смотришь, планируешь или уже посмотрел. Ставь оценки.',
+    bg: 'linear-gradient(180deg, #3a3040 0%, #1E1E1E 100%)',
+    text: 'Ставь оценки и следи за прогрессом',
   },
   {
-    icon: peopleOutline,
-    title: 'Смотри вместе',
-    description: 'Создавай совместные списки с друзьями и обсуждай оценки.',
+    bg: 'linear-gradient(180deg, #2d3a40 0%, #1E1E1E 100%)',
+    text: 'Делитесь с друзьями своими находками!',
   },
 ];
 
+async function finishOnboarding() {
+  await Preferences.set({ key: 'onboarding_seen', value: 'true' });
+  await router.replace('/login');
+}
+
 function onSwiper(swiper: SwiperInstance) {
   swiperInstance.value = swiper;
-  swiper.on('slideChange', () => {
-    isLastSlide.value = swiper.isEnd;
-  });
+  setTimeout(finishOnboarding, 3 * 2500 + 1500);
 }
 
-function handleContinue() {
-  if (isLastSlide.value) {
-    skip();
-  } else {
-    swiperInstance.value?.slideNext();
+function onSlideChange() {
+  if (swiperInstance.value) {
+    activeIndex.value = swiperInstance.value.activeIndex;
+    if (swiperInstance.value.isEnd) {
+      setTimeout(finishOnboarding, 1500);
+    }
   }
-}
-
-function skip() {
-  router.replace('/login');
 }
 </script>
 
 <style scoped>
-.onboarding-swiper {
-  height: calc(100% - 130px);
+.onb-content {
+  --background: #1E1E1E;
 }
-.onboarding-slide {
+
+.onb-swiper {
+  width: 100%;
+  height: 100%;
+}
+
+.onb-slide {
+  position: relative;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+}
+
+.slide-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.slide-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, transparent, #1E1E1E);
+  z-index: 1;
+}
+
+.slide-logo {
+  position: relative;
+  z-index: 2;
+  padding: calc(env(safe-area-inset-top) + 20px) 0 0 20px;
+}
+
+.slide-logo-img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.slide-bottom {
+  position: absolute;
+  bottom: 100px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 0 32px;
+}
+
+.slide-text {
+  color: #FFFFFF;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.onb-footer {
+  position: absolute;
+  bottom: 52px;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
   justify-content: center;
 }
-.slide-inner {
-  text-align: center;
-  padding: 24px;
+
+.onb-dots {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-.slide-icon {
-  font-size: 80px;
-  color: var(--ion-color-primary);
-}
-.slide-inner h2 {
-  font-size: 1.6rem;
-  font-weight: 700;
-  margin: 0;
-}
-.slide-inner p {
-  font-size: 1rem;
-  color: var(--ion-color-medium);
-  margin: 0;
-  max-width: 280px;
-}
-.onboarding-footer {
-  padding: 0 24px 24px;
-  display: flex;
-  flex-direction: column;
   gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  transition: background 0.3s;
+}
+
+.dot.active {
+  background: rgba(255, 255, 255, 0.8);
 }
 </style>

@@ -1,51 +1,52 @@
 <template>
   <ion-page>
-    <ion-header>
-      <ion-toolbar>
-        <ion-title>Настройка профиля</ion-title>
-      </ion-toolbar>
-    </ion-header>
+    <ion-content class="setup-content">
+      <div class="setup-inner">
+        <div class="setup-header">
+          <ion-button fill="clear" class="skip-btn" @click="skip">Пропустить</ion-button>
+        </div>
 
-    <ion-content class="ion-padding">
-      <p class="setup-subtitle">Расскажи немного о себе, чтобы друзья могли тебя найти.</p>
+        <div class="avatar-section">
+          <div class="avatar-circle">
+            <img v-if="picture" :src="picture" alt="Avatar" class="avatar-img" />
+            <ion-icon v-else :icon="cameraOutline" class="avatar-icon" />
+          </div>
+          <div class="username-input-wrap">
+            <input v-model="displayUsername" placeholder="@никнейм" class="username-input" />
+            <div class="username-line" />
+          </div>
+        </div>
 
-      <div class="avatar-section">
-        <ion-avatar class="setup-avatar">
-          <img v-if="picture" :src="picture" alt="Avatar" />
-          <ion-icon v-else :icon="personCircleOutline" />
-        </ion-avatar>
+        <div class="action-cards">
+          <div class="action-card lavender">
+            <p>Добавить<br>первые аниме</p>
+            <ion-icon :icon="sparklesOutline" class="card-icon" />
+          </div>
+          <div class="action-card cream">
+            <ion-icon :icon="sparklesOutline" class="card-icon top-right" />
+            <p>Создать<br>первый список</p>
+          </div>
+        </div>
+
+        <div class="setup-form">
+          <ion-item lines="none" class="form-item">
+            <ion-input
+              v-model="fullName"
+              placeholder="Имя"
+              class="form-input"
+            />
+          </ion-item>
+        </div>
+
+        <ion-button
+          expand="block"
+          class="start-btn"
+          :disabled="saving"
+          @click="save"
+        >
+          {{ saving ? 'Сохраняем...' : 'Начать использование' }}
+        </ion-button>
       </div>
-
-      <ion-list lines="none" class="setup-form">
-        <ion-item>
-          <ion-input
-            v-model="fullName"
-            label="Имя"
-            label-placement="stacked"
-            placeholder="Как тебя зовут?"
-            :maxlength="100"
-            clearInput
-          />
-        </ion-item>
-
-        <ion-item>
-          <ion-toggle v-model="isPublic">
-            <div class="toggle-label">
-              <span>Публичный профиль</span>
-              <p>Друзья смогут видеть твой список аниме</p>
-            </div>
-          </ion-toggle>
-        </ion-item>
-      </ion-list>
-
-      <ion-button
-        expand="block"
-        class="setup-btn"
-        :disabled="!fullName.trim() || saving"
-        @click="save"
-      >
-        {{ saving ? 'Сохраняем...' : 'Продолжить' }}
-      </ion-button>
     </ion-content>
   </ion-page>
 </template>
@@ -53,11 +54,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import {
-  IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
-  IonList, IonItem, IonInput, IonToggle, IonButton, IonAvatar, IonIcon,
-} from '@ionic/vue';
-import { personCircleOutline } from 'ionicons/icons';
+import { IonPage, IonContent, IonButton, IonItem, IonInput, IonIcon } from '@ionic/vue';
+import { cameraOutline, sparklesOutline } from 'ionicons/icons';
 import { api } from '@/api/axios';
 import { useAuthStore } from '@/stores/auth';
 import type { UserUpdate } from '@/types';
@@ -66,8 +64,8 @@ const router = useRouter();
 const authStore = useAuthStore();
 
 const fullName = ref('');
+const displayUsername = ref('');
 const picture = ref('');
-const isPublic = ref(false);
 const saving = ref(false);
 
 onMounted(() => {
@@ -75,17 +73,16 @@ onMounted(() => {
   if (user) {
     fullName.value = user.full_name ?? '';
     picture.value = user.picture ?? '';
-    isPublic.value = user.is_public_profile ?? false;
+    displayUsername.value = user.email?.split('@')[0] ? `@${user.email.split('@')[0]}` : '';
   }
 });
 
 async function save() {
-  if (!fullName.value.trim()) return;
   saving.value = true;
   try {
     const payload: UserUpdate = {
-      full_name: fullName.value.trim(),
-      is_public_profile: isPublic.value,
+      full_name: fullName.value.trim() || displayUsername.value.replace('@', ''),
+      is_public_profile: true,
     };
     await api.put('/api/v1/users/me', payload);
     await authStore.fetchMe();
@@ -96,33 +93,167 @@ async function save() {
     saving.value = false;
   }
 }
+
+function skip() {
+  router.replace('/tabs/');
+}
 </script>
 
 <style scoped>
-.setup-subtitle {
-  color: var(--ion-color-medium);
-  margin-bottom: 24px;
+.setup-content {
+  --background: #1E1E1E;
 }
+
+.setup-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 0 24px 48px;
+}
+
+.setup-header {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 16px;
+}
+
+.skip-btn {
+  --color: rgba(255,255,255,0.6);
+  --padding-start: 0;
+  --padding-end: 0;
+  font-size: 15px;
+}
+
 .avatar-section {
   display: flex;
-  justify-content: center;
-  margin-bottom: 24px;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 32px;
+  margin-bottom: 40px;
 }
-.setup-avatar {
+
+.avatar-circle {
   width: 88px;
   height: 88px;
-  font-size: 88px;
-  color: var(--ion-color-medium);
+  border-radius: 50%;
+  background: #A7B8D9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
-.toggle-label span {
-  font-size: 1rem;
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
-.toggle-label p {
-  font-size: 0.8rem;
-  color: var(--ion-color-medium);
-  margin: 2px 0 0;
+
+.avatar-icon {
+  font-size: 36px;
+  color: rgba(255,255,255,0.8);
 }
-.setup-btn {
-  margin-top: 32px;
+
+.username-input-wrap {
+  width: 200px;
+}
+
+.username-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: rgba(255,255,255,0.6);
+  font-size: 16px;
+  font-family: inherit;
+  text-align: center;
+  padding: 6px 0;
+  box-sizing: border-box;
+}
+
+.username-input::placeholder { color: rgba(255,255,255,0.35); }
+
+.username-line {
+  height: 1px;
+  background: rgba(255,255,255,0.2);
+}
+
+.action-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.action-card {
+  border-radius: 20px;
+  padding: 20px 16px;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.action-card.lavender {
+  background: #A7B8D9;
+}
+
+.action-card.cream {
+  background: #FBF9F6;
+}
+
+.action-card p {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1E1E1E;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.card-icon {
+  font-size: 32px;
+  color: rgba(30,30,30,0.4);
+  align-self: flex-end;
+}
+
+.card-icon.top-right {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  align-self: unset;
+}
+
+.setup-form {
+  margin-bottom: 24px;
+}
+
+.form-item {
+  --background: #2D2D3A;
+  --border-radius: 14px;
+  --padding-start: 16px;
+  --inner-padding-end: 16px;
+  border-radius: 14px;
+  margin-bottom: 8px;
+}
+
+.form-input {
+  --color: #FFFFFF;
+  --placeholder-color: rgba(255,255,255,0.4);
+  font-size: 16px;
+}
+
+.start-btn {
+  margin-top: auto;
+  --background: #FF9E9E;
+  --background-activated: #e08a8a;
+  --color: #1E1E1E;
+  --border-radius: 14px;
+  --box-shadow: none;
+  font-weight: 600;
+  font-size: 15px;
+  height: 52px;
 }
 </style>

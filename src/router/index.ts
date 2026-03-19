@@ -17,11 +17,11 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/views/TabsPage.vue'),
     meta: { requiresAuth: true },
     children: [
-      { path: '', redirect: '/tabs/search' },
+      { path: '', redirect: '/tabs/profile' },
       { path: 'search', component: () => import('@/views/SearchView.vue') },
+      { path: 'profile', component: () => import('@/views/ProfileView.vue') },
       { path: 'my-anime', component: () => import('@/views/MyAnimeView.vue') },
       { path: 'friends', component: () => import('@/views/FriendsView.vue') },
-      { path: 'profile', component: () => import('@/views/ProfileView.vue') },
     ],
   },
 
@@ -34,7 +34,7 @@ const routes: Array<RouteRecordRaw> = [
   { path: '/friends/sent', component: () => import('@/views/FriendSentView.vue'), meta: { requiresAuth: true } },
   { path: '/users/:id', component: () => import('@/views/UserView.vue'), meta: { requiresAuth: true } },
 
-  // Profile / Settings
+  // Settings
   { path: '/settings', component: () => import('@/views/SettingsView.vue'), meta: { requiresAuth: true } },
 
   // Shared Lists

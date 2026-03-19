@@ -3,58 +3,56 @@
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/tabs/friends" />
+          <ion-back-button text="Назад" default-href="/tabs/friends" />
         </ion-buttons>
-        <ion-searchbar
-          v-model="query"
-          placeholder="Поиск по имени..."
-          :debounce="400"
-          autofocus
-          @ion-input="search"
-          @ion-clear="results = []"
-        />
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
-      <div v-if="loading" class="ion-padding">
-        <ion-skeleton-text v-for="i in 4" :key="i" animated style="height:56px;border-radius:8px;margin-bottom:8px;" />
+    <ion-content class="search-content">
+      <div class="searchbar-wrap">
+        <ion-searchbar
+          v-model="query"
+          placeholder="Поиск"
+          :debounce="400"
+          autofocus
+          show-clear-button="focus"
+          class="main-searchbar"
+          @ion-input="search"
+          @ion-clear="results = []; searched = false"
+        />
       </div>
 
-      <ion-list v-else-if="results.length" lines="none" class="ion-padding-horizontal">
-        <ion-item v-for="user in results" :key="user.id">
-          <ion-avatar slot="start">
+      <div v-if="loading" class="skeleton-list">
+        <div v-for="i in 4" :key="i" class="skeleton-row">
+          <ion-skeleton-text animated class="skeleton-avatar" />
+          <ion-skeleton-text animated class="skeleton-name" />
+        </div>
+      </div>
+
+      <div v-else-if="results.length">
+        <div v-for="user in results" :key="user.id" class="user-row">
+          <div class="user-avatar">
             <img v-if="user.picture" :src="user.picture" />
-            <ion-icon v-else :icon="personCircleOutline" style="font-size:40px;color:var(--ion-color-medium)" />
-          </ion-avatar>
-          <ion-label>
-            <h3>{{ user.full_name }}</h3>
-            <p>{{ user.email }}</p>
-          </ion-label>
-          <ion-button
-            slot="end"
-            fill="solid"
-            size="small"
+            <ion-icon v-else :icon="cameraOutline" />
+          </div>
+          <span class="user-name">{{ user.full_name || user.email }}</span>
+          <button
+            class="add-btn"
+            :class="{ 'add-btn--sent': sent.has(user.id) }"
             :disabled="sent.has(user.id)"
             @click="sendRequest(user)"
           >
-            {{ sent.has(user.id) ? 'Отправлено' : 'Добавить' }}
-          </ion-button>
-        </ion-item>
-      </ion-list>
+            <ion-icon :icon="sent.has(user.id) ? personOutline : personAddOutline" />
+          </button>
+        </div>
+      </div>
 
       <div v-else-if="searched" class="empty-state">
-        <ion-icon :icon="searchOutline" class="empty-icon" />
         <p>Никого не найдено</p>
       </div>
     </ion-content>
 
-    <ion-toast
-      :is-open="toastOpen"
-      :message="toastMsg"
-      :duration="2000"
-      @did-dismiss="toastOpen = false"
-    />
+    <ion-toast :is-open="toastOpen" :message="toastMsg" :duration="2000" @did-dismiss="toastOpen = false" />
   </ion-page>
 </template>
 
@@ -62,10 +60,9 @@
 import { ref } from 'vue';
 import {
   IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonSearchbar,
-  IonContent, IonList, IonItem, IonAvatar, IonLabel, IonButton, IonIcon,
-  IonSkeletonText, IonToast,
+  IonContent, IonIcon, IonSkeletonText, IonToast,
 } from '@ionic/vue';
-import { personCircleOutline, searchOutline } from 'ionicons/icons';
+import { cameraOutline, personAddOutline, personOutline } from 'ionicons/icons';
 import { friendsApi } from '@/api/friends';
 import type { UserOut } from '@/types';
 
@@ -78,7 +75,7 @@ const toastOpen = ref(false);
 const toastMsg = ref('');
 
 async function search() {
-  if (!query.value.trim() || query.value.trim().length < 2) { results.value = []; return; }
+  if (!query.value.trim() || query.value.trim().length < 2) { results.value = []; searched.value = false; return; }
   loading.value = true;
   searched.value = true;
   try {
@@ -92,8 +89,8 @@ async function search() {
 async function sendRequest(user: UserOut) {
   try {
     await friendsApi.sendRequest({ receiver_id: user.id });
-    sent.value.add(user.id);
-    toastMsg.value = `Заявка отправлена ${user.full_name}`;
+    sent.value = new Set([...sent.value, user.id]);
+    toastMsg.value = 'Заявка отправлена';
     toastOpen.value = true;
   } catch {
     toastMsg.value = 'Не удалось отправить заявку';
@@ -103,9 +100,76 @@ async function sendRequest(user: UserOut) {
 </script>
 
 <style scoped>
-.empty-state {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 60px 24px; gap: 12px; text-align: center;
+ion-header ion-toolbar { --background: #1E1E1E; --border-width: 0; }
+
+.search-content { --background: #1E1E1E; }
+
+.searchbar-wrap { padding: 8px 12px 4px; }
+
+.main-searchbar {
+  --background: #2D2D3A;
+  --color: #FFFFFF;
+  --placeholder-color: rgba(255,255,255,0.4);
+  --icon-color: rgba(255,255,255,0.4);
+  --clear-button-color: rgba(255,255,255,0.4);
+  --border-radius: 12px;
+  --box-shadow: none;
+  padding: 0;
+  height: 44px;
 }
-.empty-icon { font-size: 56px; color: var(--ion-color-medium); }
+
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #4A4A5A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.user-avatar ion-icon { font-size: 22px; color: rgba(255,255,255,0.5); }
+
+.user-name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.add-btn {
+  background: transparent;
+  border: none;
+  color: #5cb85c;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.add-btn--sent { color: rgba(255,255,255,0.3); }
+.add-btn:disabled { cursor: default; }
+
+.skeleton-list { padding: 8px 0; }
+.skeleton-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
+.skeleton-avatar { width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0; --background: #2D2D3A; }
+.skeleton-name { flex: 1; height: 16px; border-radius: 8px; --background: #2D2D3A; }
+
+.empty-state { display: flex; justify-content: center; padding: 48px 24px; }
+.empty-state p { color: rgba(255,255,255,0.4); margin: 0; font-size: 15px; }
 </style>
