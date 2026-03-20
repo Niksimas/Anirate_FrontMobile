@@ -3,15 +3,7 @@
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button text="Назад" default-href="/lists" />
-        </ion-buttons>
-        <ion-buttons slot="end">
-          <ion-button @click="addAnimeModal?.$el.present()">
-            <ion-icon slot="icon-only" :icon="addOutline" />
-          </ion-button>
-          <ion-button v-if="isOwner" @click="settingsAlert = true">
-            <ion-icon slot="icon-only" :icon="ellipsisHorizontal" />
-          </ion-button>
+          <ion-back-button text="Назад" default-href="/tabs/lists" />
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -22,27 +14,31 @@
       </ion-refresher>
 
       <!-- List header -->
-      <div class="list-header" v-if="list">
+      <div v-if="list" class="list-header">
         <h1 class="list-title">{{ list.name }}</h1>
-        <p class="list-meta">
-          <span>Участники {{ list.member_count }}</span>
-          <span class="meta-sep">·</span>
-          <span>Аниме {{ animeList.length }}</span>
-        </p>
+        <div class="list-meta-row">
+          <button class="meta-link" @click="router.push(`/tabs/lists/${listId}/members?owner=${list.owner_id}`)">
+            Участники&nbsp;&nbsp;{{ list.member_count }}
+          </button>
+          <button v-if="isOwner" class="meta-link meta-link--add" @click="router.push(`/tabs/lists/${listId}/add-members`)">
+            Добавить участников
+          </button>
+        </div>
       </div>
 
       <!-- Skeleton -->
       <div v-if="loading">
-        <div v-for="i in 4" :key="i" class="anime-list-item skeleton-item">
+        <div v-for="i in 4" :key="i" class="anime-list-item">
           <ion-skeleton-text animated class="skeleton-thumb" />
           <div style="flex:1">
-            <ion-skeleton-text animated style="height:14px;width:70%;margin-bottom:6px;" />
-            <ion-skeleton-text animated style="height:12px;width:50%;" />
+            <ion-skeleton-text animated style="height:18px;width:70%;margin-bottom:6px;" />
+            <ion-skeleton-text animated style="height:14px;width:50%;margin-bottom:10px;" />
+            <ion-skeleton-text animated style="height:13px;width:60%;" />
           </div>
         </div>
       </div>
 
-      <!-- List -->
+      <!-- Anime list -->
       <div v-else-if="animeList.length">
         <div
           v-for="item in animeList"
@@ -53,11 +49,16 @@
           <img :src="item.image_url" :alt="item.title" class="anime-thumb" />
           <div class="anime-meta">
             <p class="anime-name">{{ item.title }}</p>
-            <p class="anime-season">Добавлено в список</p>
+            <p class="anime-season">Весна / 2024</p>
             <p v-if="item.average_score" class="anime-avg">Средняя оценка участников: {{ item.average_score.toFixed(1) }}/10</p>
+            <p v-else-if="getMyRating(item)" class="anime-avg">Оценка: {{ getMyRating(item) }}/10</p>
           </div>
-          <button class="status-pill" :class="{ 'status-pill--active': hasMyRating(item) }">
-            <ion-icon v-if="hasMyRating(item)" :icon="checkmarkOutline" />
+          <button
+            class="status-pill"
+            :class="{ 'status-pill--active': hasMyRating(item) }"
+            @click.stop
+          >
+            <ion-icon v-if="hasMyRating(item)" :icon="checkmarkCircle" class="status-check" />
             В планах
           </button>
         </div>
@@ -93,16 +94,6 @@
       />
     </ion-modal>
 
-    <!-- Members sheet -->
-    <ion-modal ref="membersMenu" :initial-breakpoint="0.75" :breakpoints="[0, 0.75, 1]">
-      <ListMembersSheet
-        :list-id="listId"
-        :owner-id="list?.owner_id"
-        :my-user-id="myUserId"
-        @close="membersMenu?.$el.dismiss()"
-      />
-    </ion-modal>
-
     <!-- Settings action sheet -->
     <ion-action-sheet
       :is-open="settingsAlert"
@@ -123,10 +114,9 @@ import {
   IonContent, IonRefresher, IonRefresherContent, IonSkeletonText,
   IonModal, IonActionSheet, IonToast,
 } from '@ionic/vue';
-import { addOutline, ellipsisHorizontal, albumsOutline, checkmarkOutline } from 'ionicons/icons';
+import { addOutline, ellipsisHorizontal, albumsOutline, checkmarkCircle } from 'ionicons/icons';
 import RateAnimeSheet from '@/components/RateAnimeSheet.vue';
 import AddAnimeSheet from '@/components/AddAnimeSheet.vue';
-import ListMembersSheet from '@/components/ListMembersSheet.vue';
 import { listsApi } from '@/api/lists';
 import { useAuthStore } from '@/stores/auth';
 import type { SharedListResponse, ListAnimeResponse } from '@/types';
@@ -143,7 +133,6 @@ const animeList = ref<ListAnimeResponse[]>([]);
 const loading = ref(true);
 const rateModal = ref();
 const addAnimeModal = ref();
-const membersMenu = ref();
 const ratingItem = ref<ListAnimeResponse | null>(null);
 const settingsAlert = ref(false);
 const toastOpen = ref(false);
@@ -155,11 +144,12 @@ function hasMyRating(item: ListAnimeResponse): boolean {
   return (item.ratings?.some((r) => r.user_id === myUserId.value)) ?? false;
 }
 
+function getMyRating(item: ListAnimeResponse): number | null {
+  const r = item.ratings?.find((r) => r.user_id === myUserId.value);
+  return r?.score ?? null;
+}
+
 const ownerButtons = computed(() => [
-  {
-    text: 'Участники',
-    handler: () => membersMenu.value?.$el.present(),
-  },
   {
     text: 'Скопировать инвайт-код',
     handler: async () => {
@@ -181,13 +171,13 @@ const ownerButtons = computed(() => [
   },
   {
     text: 'Удалить список',
-    role: 'destructive',
+    role: 'destructive' as const,
     handler: async () => {
       await listsApi.delete(listId);
-      router.replace('/tabs/profile');
+      router.replace('/tabs/lists');
     },
   },
-  { text: 'Отмена', role: 'cancel' },
+  { text: 'Отмена', role: 'cancel' as const },
 ]);
 
 onMounted(load);
@@ -228,105 +218,137 @@ function onAnimeAdded(item: ListAnimeResponse) {
 
 <style scoped>
 ion-header ion-toolbar { --background: #1E1E1E; --border-width: 0; }
-.list-detail-content { --background: #1E1E1E; }
+.list-detail-content { --background: #111111; }
 
 .list-header {
   padding: 8px 16px 16px;
 }
 
 .list-title {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
   color: #FFFFFF;
-  margin: 0 0 4px;
-  letter-spacing: -0.4px;
+  margin: 0 0 6px;
+  letter-spacing: -0.5px;
 }
 
-.list-meta {
-  font-size: 13px;
-  color: rgba(255,255,255,0.5);
-  margin: 0;
-  display: flex;
-  gap: 6px;
-}
-
-.meta-sep { color: rgba(255,255,255,0.25); }
-
-/* List items */
-.anime-list-item {
+.list-meta-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  justify-content: space-between;
+}
+
+.meta-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: inherit;
   cursor: pointer;
 }
 
+.meta-link--add {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Anime list items */
+.anime-list-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  position: relative;
+}
+
 .anime-thumb {
-  width: 60px;
-  height: 60px;
-  border-radius: 10px;
+  width: 100px;
+  height: 130px;
+  border-radius: 12px;
   object-fit: cover;
   flex-shrink: 0;
   background: #2D2D3A;
 }
 
-.anime-meta { flex: 1; min-width: 0; }
+.anime-meta {
+  flex: 1;
+  min-width: 0;
+}
 
 .anime-name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   color: #FFFFFF;
-  margin: 0 0 2px;
-  white-space: nowrap;
+  margin: 0 0 4px;
+  letter-spacing: -0.3px;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .anime-season {
-  font-size: 12px;
-  color: rgba(255,255,255,0.4);
-  margin: 0 0 2px;
-  text-transform: capitalize;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 8px;
 }
 
 .anime-avg {
-  font-size: 11px;
-  color: rgba(255,255,255,0.35);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
   margin: 0;
 }
 
+/* Status pill */
 .status-pill {
   flex-shrink: 0;
-  padding: 6px 12px;
-  border-radius: 20px;
+  padding: 8px 16px;
+  border-radius: 10px;
   border: none;
-  background: #2D2D3A;
-  color: rgba(255,255,255,0.6);
-  font-size: 12px;
-  font-weight: 500;
+  background: #697289;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   white-space: nowrap;
 }
 
 .status-pill--active {
-  background: #3D5C3D;
-  color: #5cb85c;
+  background: #FFFFFF;
+  color: #1A1A1A;
+}
+
+.status-check {
+  font-size: 18px;
+  color: #4CAF50;
 }
 
 /* Skeleton */
-.skeleton-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
-.skeleton-thumb { width: 60px; height: 60px; border-radius: 10px; flex-shrink: 0; --background: #2D2D3A; }
+.skeleton-thumb {
+  width: 100px;
+  height: 130px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  --background: #2D2D3A;
+}
 
 .empty-state {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; padding: 80px 24px; gap: 12px; text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  gap: 12px;
+  text-align: center;
 }
+
 .empty-icon { font-size: 56px; color: #697289; }
 .empty-state p { color: #FBF9F6; margin: 0; }
-.hint { color: rgba(255,255,255,0.4) !important; font-size: 0.85rem; }
+.hint { color: rgba(255, 255, 255, 0.4) !important; font-size: 0.85rem; }
 </style>

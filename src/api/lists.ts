@@ -9,6 +9,8 @@ import type {
   ListAnimeResponse,
   RateRequest,
   RatingResponse,
+  AddableFriendResponse,
+  InviteCodeResponse,
 } from '@/types';
 
 export const listsApi = {
@@ -33,7 +35,7 @@ export const listsApi = {
     api.post<SharedListResponse>(`/api/v1/lists/join/${inviteCode}`),
 
   regenerateInvite: (listId: number) =>
-    api.post(`/api/v1/lists/${listId}/invite`),
+    api.post<InviteCodeResponse>(`/api/v1/lists/${listId}/invite`),
 
   // Members
   getMembers: (listId: number) =>
@@ -44,6 +46,12 @@ export const listsApi = {
 
   leaveList: (listId: number) =>
     api.delete(`/api/v1/lists/${listId}/leave`),
+
+  getSuggestions: (listId: number) =>
+    api.get<AddableFriendResponse[]>(`/api/v1/lists/${listId}/suggestions`),
+
+  addMemberDirectly: (listId: number, userId: number) =>
+    api.post<SharedListResponse>(`/api/v1/lists/${listId}/members/add`, { user_id: userId }),
 
   // Anime in list
   addAnime: (listId: number, payload: ListAnimeAdd) =>

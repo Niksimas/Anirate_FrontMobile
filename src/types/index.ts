@@ -110,6 +110,34 @@ export interface FriendRequestCreate {
   receiver_id: number;
 }
 
+export interface FriendRequestResponse {
+  id: number;
+  sender_id: number;
+  receiver_id: number;
+  status: string;
+}
+
+export interface FriendResponse {
+  id: number;
+  email: string;
+  full_name?: string | null;
+  picture?: string | null;
+}
+
+export interface StatusResponse {
+  status: string;
+}
+
+export interface AddableFriendResponse {
+  user_id: number;
+  full_name?: string | null;
+  picture?: string | null;
+}
+
+export interface InviteCodeResponse {
+  invite_code: string;
+}
+
 // ─── Shared Lists ─────────────────────────────────────────────────────────────
 
 export interface SharedListCreate {

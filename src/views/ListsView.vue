@@ -2,6 +2,9 @@
   <ion-page>
     <ion-header>
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-back-button text="Назад" default-href="/tabs/profile" />
+        </ion-buttons>
         <ion-title>Мои списки</ion-title>
         <ion-buttons slot="end">
           <ion-button @click="createModal?.$el.present()">
@@ -26,7 +29,7 @@
           :key="list.id"
           button
           class="list-item"
-          @click="router.push(`/lists/${list.id}`)"
+          @click="router.push(`/tabs/lists/${list.id}`)"
         >
           <div slot="start" class="list-icon-wrap">
             <ion-icon :icon="albumsOutline" />
@@ -99,7 +102,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import {
-  IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonIcon,
+  IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonButton, IonIcon,
   IonContent, IonRefresher, IonRefresherContent, IonList, IonItem, IonLabel,
   IonSkeletonText, IonModal, IonInput, IonToast,
 } from '@ionic/vue';
@@ -137,7 +140,7 @@ async function createList() {
     newName.value = '';
     newDesc.value = '';
     createModal.value?.$el.dismiss();
-    router.push(`/lists/${data.id}`);
+    router.push(`/tabs/lists/${data.id}`);
   } finally { creating.value = false; }
 }
 

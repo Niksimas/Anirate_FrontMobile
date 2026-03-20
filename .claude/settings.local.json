@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"sdk.dir=C:\\\\\\\\Users\\\\\\\\Admin\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Android\\\\\\\\Sdk\")",
+      "Bash(java:*)",
+      "Bash(winget search:*)",
+      "Bash(cmd.exe //c \"winget --version\" 2>&1)",
+      "Bash(ipconfig)",
+      "Bash(curl -s http://localhost:8000/openapi.json)",
+      "Bash(python3 -c \":*)"
+    ]
+  }
+}

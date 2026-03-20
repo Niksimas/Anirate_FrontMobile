@@ -82,7 +82,7 @@ async function kick(userId: number) {
 async function leaveList() {
   await listsApi.leaveList(props.listId);
   emit('close');
-  router.replace('/lists');
+  router.replace('/tabs/lists');
 }
 
 function formatDate(iso: string) {
