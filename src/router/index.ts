@@ -22,6 +22,11 @@ const routes: Array<RouteRecordRaw> = [
       { path: 'profile', component: () => import('@/views/ProfileView.vue') },
       { path: 'my-anime', component: () => import('@/views/MyAnimeView.vue') },
       { path: 'friends', component: () => import('@/views/FriendsView.vue') },
+      // Shared Lists (inside tabs to keep tab bar)
+      { path: 'lists', component: () => import('@/views/ListsView.vue') },
+      { path: 'lists/:id', component: () => import('@/views/ListDetailView.vue') },
+      { path: 'lists/:id/members', component: () => import('@/views/ListMembersView.vue') },
+      { path: 'lists/:id/add-members', component: () => import('@/views/ListAddMembersView.vue') },
     ],
   },
 
@@ -30,17 +35,10 @@ const routes: Array<RouteRecordRaw> = [
 
   // Friends
   { path: '/friends/search', component: () => import('@/views/FriendSearchView.vue'), meta: { requiresAuth: true } },
-  { path: '/friends/requests', component: () => import('@/views/FriendRequestsView.vue'), meta: { requiresAuth: true } },
-  { path: '/friends/sent', component: () => import('@/views/FriendSentView.vue'), meta: { requiresAuth: true } },
   { path: '/users/:id', component: () => import('@/views/UserView.vue'), meta: { requiresAuth: true } },
 
   // Settings
   { path: '/settings', component: () => import('@/views/SettingsView.vue'), meta: { requiresAuth: true } },
-
-  // Shared Lists
-  { path: '/lists', component: () => import('@/views/ListsView.vue'), meta: { requiresAuth: true } },
-  { path: '/lists/:id', component: () => import('@/views/ListDetailView.vue'), meta: { requiresAuth: true } },
-  { path: '/lists/:id/members', component: () => import('@/views/ListMembersView.vue'), meta: { requiresAuth: true } },
 ];
 
 const router = createRouter({

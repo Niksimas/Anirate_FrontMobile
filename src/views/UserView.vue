@@ -95,7 +95,7 @@
               v-for="list in commonLists"
               :key="list.id"
               class="list-card list-card--cover"
-              @click="router.push(`/lists/${list.id}`)"
+              @click="router.push(`/tabs/lists/${list.id}`)"
             >
               <div class="list-cover-placeholder" />
               <div class="list-card-footer">

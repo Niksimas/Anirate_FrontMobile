@@ -332,7 +332,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FriendRequestResponse"
+                }
               }
             }
           },
@@ -367,7 +369,44 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FriendRequestResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Incoming Requests Api V1 Friends Incoming Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/friends/outgoing": {
+      "get": {
+        "tags": [
+          "Friends"
+        ],
+        "summary": "Outgoing Requests",
+        "description": "Исходящие заявки в друзья со статусом pending.",
+        "operationId": "outgoing_requests_api_v1_friends_outgoing_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FriendRequestResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Outgoing Requests Api V1 Friends Outgoing Get"
+                }
               }
             }
           }
@@ -408,7 +447,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FriendRequestResponse"
+                }
               }
             }
           },
@@ -454,7 +495,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
               }
             }
           },
@@ -484,7 +527,13 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FriendResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Friends List Api V1 Friends  Get"
+                }
               }
             }
           }
@@ -525,7 +574,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
               }
             }
           },
@@ -565,7 +616,51 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/anime/import": {
+      "post": {
+        "tags": [
+          "Anime"
+        ],
+        "summary": "Import Anime",
+        "description": "Импорт аниме из внешнего источника. Принимает список аниме, сохраняет в БД и индексирует в ES.",
+        "operationId": "import_anime_api_v1_anime_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnimeImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResponse"
+                }
               }
             }
           },
@@ -595,7 +690,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ReindexResponse"
+                }
               }
             }
           }
@@ -692,6 +789,32 @@
         }
       }
     },
+    "/api/v1/anime/genres": {
+      "get": {
+        "tags": [
+          "Anime"
+        ],
+        "summary": "Get Genres",
+        "description": "Список всех жанров.",
+        "operationId": "get_genres_api_v1_anime_genres_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GenreResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Genres Api V1 Anime Genres Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/anime/stats": {
       "get": {
         "tags": [
@@ -705,7 +828,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/StatsResponse"
+                }
               }
             }
           }
@@ -746,7 +871,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestResponse"
+                }
               }
             }
           },
@@ -1509,6 +1636,116 @@
         }
       }
     },
+    "/api/v1/lists/{list_id}/suggestions": {
+      "get": {
+        "tags": [
+          "Shared Lists"
+        ],
+        "summary": "Get Addable Friends",
+        "description": "Друзья владельца, которых ещё нет в списке. Только для владельца.",
+        "operationId": "get_addable_friends_api_v1_lists__list_id__suggestions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "List Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AddableFriendResponse"
+                  },
+                  "title": "Response Get Addable Friends Api V1 Lists  List Id  Suggestions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lists/{list_id}/members/add": {
+      "post": {
+        "tags": [
+          "Shared Lists"
+        ],
+        "summary": "Add Member Directly",
+        "description": "Добавить друга в список напрямую (без инвайт-ссылки). Только для владельца.",
+        "operationId": "add_member_directly_api_v1_lists__list_id__members_add_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "List Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMemberRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/lists/{list_id}/leave": {
       "delete": {
         "tags": [
@@ -1629,7 +1866,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/InviteCodeResponse"
+                }
               }
             }
           },
@@ -1954,6 +2193,128 @@
   },
   "components": {
     "schemas": {
+      "AddMemberRequest": {
+        "properties": {
+          "user_id": {
+            "type": "integer",
+            "title": "User Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id"
+        ],
+        "title": "AddMemberRequest"
+      },
+      "AddableFriendResponse": {
+        "properties": {
+          "user_id": {
+            "type": "integer",
+            "title": "User Id"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "picture": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Picture"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id"
+        ],
+        "title": "AddableFriendResponse"
+      },
+      "AnimeCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "image_url": {
+            "type": "string",
+            "title": "Image Url"
+          },
+          "anime_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anime Url"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "season": {
+            "type": "string",
+            "title": "Season"
+          },
+          "genres": {
+            "items": {
+              "$ref": "#/components/schemas/GenreBase"
+            },
+            "type": "array",
+            "title": "Genres",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "image_url",
+          "year",
+          "season"
+        ],
+        "title": "AnimeCreate"
+      },
+      "AnimeImportRequest": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AnimeCreate"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "AnimeImportRequest"
+      },
       "AnimeResponse": {
         "properties": {
           "id": {
@@ -1979,6 +2340,17 @@
             ],
             "title": "Anime Url"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "year": {
             "type": "integer",
             "title": "Year"
@@ -1986,6 +2358,14 @@
           "season": {
             "type": "string",
             "title": "Season"
+          },
+          "genres": {
+            "items": {
+              "$ref": "#/components/schemas/GenreResponse"
+            },
+            "type": "array",
+            "title": "Genres",
+            "default": []
           },
           "created_at": {
             "type": "string",
@@ -2018,6 +2398,127 @@
         ],
         "title": "FriendRequestCreate"
       },
+      "FriendRequestResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "sender_id": {
+            "type": "integer",
+            "title": "Sender Id"
+          },
+          "receiver_id": {
+            "type": "integer",
+            "title": "Receiver Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sender_id",
+          "receiver_id",
+          "status"
+        ],
+        "title": "FriendRequestResponse"
+      },
+      "FriendResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "picture": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Picture"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email"
+        ],
+        "title": "FriendResponse"
+      },
+      "GenreBase": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "alias": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alias"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "GenreBase"
+      },
+      "GenreResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "alias": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alias"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "GenreResponse"
+      },
       "GoogleAuthRequest": {
         "properties": {
           "token": {
@@ -2043,6 +2544,37 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ImportResponse": {
+        "properties": {
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "added",
+          "skipped"
+        ],
+        "title": "ImportResponse"
+      },
+      "InviteCodeResponse": {
+        "properties": {
+          "invite_code": {
+            "type": "string",
+            "title": "Invite Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "invite_code"
+        ],
+        "title": "InviteCodeResponse"
       },
       "ListAnimeAdd": {
         "properties": {
@@ -2241,6 +2773,29 @@
           "refresh_token"
         ],
         "title": "RefreshTokenRequest"
+      },
+      "ReindexResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reindexed": {
+            "type": "integer",
+            "title": "Reindexed"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "reindexed",
+          "message"
+        ],
+        "title": "ReindexResponse"
       },
       "SearchRequest": {
         "properties": {
@@ -2455,6 +3010,79 @@
         "type": "object",
         "title": "SharedListUpdate"
       },
+      "StatsResponse": {
+        "properties": {
+          "total_anime": {
+            "type": "integer",
+            "title": "Total Anime"
+          },
+          "by_year": {
+            "type": "object",
+            "title": "By Year"
+          },
+          "by_season": {
+            "type": "object",
+            "title": "By Season"
+          },
+          "elasticsearch_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elasticsearch Count"
+          },
+          "elasticsearch_status": {
+            "type": "string",
+            "title": "Elasticsearch Status"
+          },
+          "sync_status": {
+            "type": "string",
+            "title": "Sync Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_anime",
+          "by_year",
+          "by_season",
+          "elasticsearch_status",
+          "sync_status"
+        ],
+        "title": "StatsResponse"
+      },
+      "StatusResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StatusResponse"
+      },
+      "SuggestResponse": {
+        "properties": {
+          "suggestions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggestions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "suggestions"
+        ],
+        "title": "SuggestResponse"
+      },
       "SyncRequest": {
         "properties": {
           "year": {
@@ -2475,6 +3103,24 @@
         },
         "type": "object",
         "title": "SyncRequest"
+      },
+      "SyncResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "title": "SyncResponse"
       },
       "Token": {
         "properties": {

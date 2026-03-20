@@ -1,24 +1,27 @@
 import { api } from './axios';
-import type { FriendRequestCreate, UserOut, UserResponse } from '@/types';
+import type { FriendRequestCreate, FriendRequestResponse, FriendResponse, StatusResponse, UserOut, UserResponse } from '@/types';
 
 export const friendsApi = {
   sendRequest: (payload: FriendRequestCreate) =>
-    api.post('/api/v1/friends/request', payload),
+    api.post<FriendRequestResponse>('/api/v1/friends/request', payload),
 
   incoming: () =>
-    api.get('/api/v1/friends/incoming'),
+    api.get<FriendRequestResponse[]>('/api/v1/friends/incoming'),
+
+  outgoing: () =>
+    api.get<FriendRequestResponse[]>('/api/v1/friends/outgoing'),
 
   accept: (requestId: number) =>
-    api.post(`/api/v1/friends/${requestId}/accept`),
+    api.post<FriendRequestResponse>(`/api/v1/friends/${requestId}/accept`),
 
   decline: (requestId: number) =>
-    api.delete(`/api/v1/friends/${requestId}/decline`),
+    api.delete<StatusResponse>(`/api/v1/friends/${requestId}/decline`),
 
   list: () =>
-    api.get('/api/v1/friends/'),
+    api.get<FriendResponse[]>('/api/v1/friends/'),
 
   remove: (friendId: number) =>
-    api.delete(`/api/v1/friends/${friendId}`),
+    api.delete<StatusResponse>(`/api/v1/friends/${friendId}`),
 
   search: (q: string) =>
     api.get<UserOut[]>('/api/v1/users/search', { params: { q } }),

@@ -44,8 +44,8 @@
         <!-- Просмотрено wide card -->
         <div class="wide-card lavender-card" @click="router.push('/tabs/my-anime')">
           <div class="wide-card-text">
-            <span class="wide-card-label">Просмотрено</span>
-            <span class="wide-card-value">{{ stats?.completed ?? 0 }}</span>
+            <span class="wide-card-label">Всего</span>
+            <span class="wide-card-value">{{ stats?.total ?? 0 }}</span>
           </div>
           <ion-icon :icon="sparkles" class="sparkle-icon" />
         </div>
@@ -101,7 +101,7 @@
             v-for="list in lists"
             :key="list.id"
             class="list-card list-card--cover"
-            @click="router.push(`/lists/${list.id}`)"
+            @click="router.push(`/tabs/lists/${list.id}`)"
           >
             <div class="list-cover-placeholder" />
             <div class="list-card-footer">
@@ -206,7 +206,7 @@ async function createList() {
     const { data } = await listsApi.create({ name: newListName.value.trim(), description: null });
     lists.value.unshift({ id: data.id, name: data.name, owner_id: data.owner_id, member_count: 1, anime_count: 0 });
     createModal.value?.$el.dismiss();
-    router.push(`/lists/${data.id}`);
+    router.push(`/tabs/lists/${data.id}`);
   } finally {
     creatingList.value = false;
   }

@@ -127,7 +127,7 @@
         />
       </div>
 
-      <ion-infinite-scroll @ion-infinite="loadMore">
+      <ion-infinite-scroll ref="infiniteScrollRef" :disabled="noMore" @ion-infinite="loadMore">
         <ion-infinite-scroll-content />
       </ion-infinite-scroll>
     </ion-content>
@@ -156,6 +156,7 @@ const loading = ref(false);
 const loadingMore = ref(false);
 const searched = ref(false);
 const offset = ref(0);
+const noMore = ref(false);
 const LIMIT = 30;
 
 // Filter state
@@ -172,12 +173,16 @@ onMounted(loadBrowse);
 
 async function loadBrowse() {
   loading.value = true;
+  noMore.value = false;
   try {
     const { data } = await animeApi.getAll({
       limit: LIMIT, offset: 0,
       year: filterYear.value ?? undefined,
     });
     browse.value = data;
+    if (data.length < LIMIT) {
+      noMore.value = true;
+    }
   } catch (e) {
     console.error(e);
   } finally {
@@ -195,12 +200,14 @@ function onClear() {
   searched.value = false;
   query.value = '';
   offset.value = 0;
+  noMore.value = false;
 }
 
 async function runSearch(reset = false) {
   if (reset) {
     offset.value = 0;
     results.value = [];
+    noMore.value = false;
     loading.value = true;
   } else {
     loadingMore.value = true;
@@ -213,6 +220,9 @@ async function runSearch(reset = false) {
       offset: offset.value,
     });
     results.value = reset ? data.items : [...results.value, ...data.items];
+    if (data.items.length < LIMIT || results.value.length >= data.total) {
+      noMore.value = true;
+    }
   } catch (e) {
     console.error(e);
   } finally {
@@ -231,6 +241,9 @@ async function loadMore(ev: InfiniteScrollCustomEvent) {
       year: filterYear.value ?? undefined,
     });
     browse.value = [...browse.value, ...data];
+    if (data.length < LIMIT) {
+      noMore.value = true;
+    }
   }
   ev.target.complete();
 }
