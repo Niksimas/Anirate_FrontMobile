@@ -44,23 +44,30 @@
           v-for="item in animeList"
           :key="item.anime_id"
           class="anime-list-item"
-          @click="openRating(item)"
         >
-          <img :src="item.image_url" :alt="item.title" class="anime-thumb" />
+          <div class="thumb-wrapper" @click="router.push(`/tabs/lists/${listId}/anime/${item.anime_id}/ratings`)">
+            <img :src="item.image_url" :alt="item.title" class="anime-thumb" />
+            <span v-if="item.average_score != null" class="score-badge">
+              {{ Math.round(item.average_score) }}
+            </span>
+          </div>
           <div class="anime-meta">
             <p class="anime-name">{{ item.title }}</p>
-            <p class="anime-season">Весна / 2024</p>
-            <p v-if="item.average_score" class="anime-avg">Средняя оценка участников: {{ item.average_score.toFixed(1) }}/10</p>
-            <p v-else-if="getMyRating(item)" class="anime-avg">Оценка: {{ getMyRating(item) }}/10</p>
+            <p class="anime-season">{{ item.season }} / {{ item.year }}</p>
           </div>
-          <button
-            class="status-pill"
-            :class="{ 'status-pill--active': hasMyRating(item) }"
-            @click.stop
-          >
-            <ion-icon v-if="hasMyRating(item)" :icon="checkmarkCircle" class="status-check" />
-            В планах
-          </button>
+          <div class="item-actions">
+            <button
+              class="status-pill"
+              :class="{ 'status-pill--active': isTracked(item) }"
+              @click.stop="togglePlan(item)"
+            >
+              <ion-icon v-if="isTracked(item)" :icon="checkmarkCircle" class="status-check" />
+              {{ isTracked(item) ? 'Добавлено' : 'В план' }}
+            </button>
+            <button class="rate-btn" @click.stop="openRating(item)">
+              Оценить
+            </button>
+          </div>
         </div>
       </div>
 
@@ -73,15 +80,14 @@
     </ion-content>
 
     <!-- Rate anime modal -->
-    <ion-modal ref="rateModal" :initial-breakpoint="0.6" :breakpoints="[0, 0.6]">
+    <ion-modal ref="rateModal" :initial-breakpoint="0.6" :breakpoints="[0, 0.6]" @did-dismiss="ratingItem = null">
       <RateAnimeSheet
         v-if="ratingItem"
         :list-id="listId"
         :item="ratingItem"
-        :my-user-id="myUserId"
+        :my-rating="currentMyRating"
         @close="rateModal?.$el.dismiss()"
         @saved="onRatingSaved"
-        @remove-anime="onAnimeRemoved"
       />
     </ion-modal>
 
@@ -118,6 +124,7 @@ import { addOutline, ellipsisHorizontal, albumsOutline, checkmarkCircle } from '
 import RateAnimeSheet from '@/components/RateAnimeSheet.vue';
 import AddAnimeSheet from '@/components/AddAnimeSheet.vue';
 import { listsApi } from '@/api/lists';
+import { trackingApi } from '@/api/tracking';
 import { useAuthStore } from '@/stores/auth';
 import type { SharedListResponse, ListAnimeResponse } from '@/types';
 import type { RefresherCustomEvent } from '@ionic/vue';
@@ -130,8 +137,10 @@ const listId = Number(route.params.id);
 const myUserId = computed(() => authStore.user?.id ?? 0);
 const list = ref<SharedListResponse | null>(null);
 const animeList = ref<ListAnimeResponse[]>([]);
+const trackedAnimeIds = ref<Set<number>>(new Set());
 const loading = ref(true);
 const rateModal = ref();
+const currentMyRating = ref<{ score: number; comment: string | null } | null>(null);
 const addAnimeModal = ref();
 const ratingItem = ref<ListAnimeResponse | null>(null);
 const settingsAlert = ref(false);
@@ -140,13 +149,16 @@ const toastMsg = ref('');
 
 const isOwner = computed(() => list.value?.owner_id === myUserId.value);
 
-function hasMyRating(item: ListAnimeResponse): boolean {
-  return (item.ratings?.some((r) => r.user_id === myUserId.value)) ?? false;
+function isTracked(item: ListAnimeResponse): boolean {
+  return trackedAnimeIds.value.has(item.anime_id);
 }
 
-function getMyRating(item: ListAnimeResponse): number | null {
-  const r = item.ratings?.find((r) => r.user_id === myUserId.value);
-  return r?.score ?? null;
+async function togglePlan(item: ListAnimeResponse) {
+  if (isTracked(item)) return;
+  try {
+    await trackingApi.add({ anime_id: item.anime_id, status: 'planned' });
+    trackedAnimeIds.value.add(item.anime_id);
+  } catch { /* already tracked */ }
 }
 
 const ownerButtons = computed(() => [
@@ -184,7 +196,7 @@ onMounted(load);
 
 async function load() {
   loading.value = true;
-  try { await Promise.all([loadList(), loadAnime()]); }
+  try { await Promise.all([loadList(), loadAnime(), loadTracking()]); }
   finally { loading.value = false; }
 }
 
@@ -198,17 +210,23 @@ async function loadAnime() {
   animeList.value = data;
 }
 
+async function loadTracking() {
+  const { data } = await trackingApi.getMyTracking();
+  trackedAnimeIds.value = new Set(data.map(t => t.anime_id));
+}
+
 async function refresh(ev: RefresherCustomEvent) { await load(); ev.detail.complete(); }
 
 function openRating(item: ListAnimeResponse) {
   ratingItem.value = item;
+  const my = item.ratings?.find(r => r.user_id === myUserId.value);
+  currentMyRating.value = my ? { score: my.score, comment: my.comment ?? null } : null;
   rateModal.value?.$el.present();
 }
 
-function onRatingSaved() { loadAnime(); rateModal.value?.$el.dismiss(); }
-function onAnimeRemoved(animeId: number) {
-  animeList.value = animeList.value.filter((a) => a.anime_id !== animeId);
+async function onRatingSaved() {
   rateModal.value?.$el.dismiss();
+  await loadAnime();
 }
 function onAnimeAdded(item: ListAnimeResponse) {
   animeList.value.push(item);
@@ -255,11 +273,15 @@ ion-header ion-toolbar { --background: #1E1E1E; --border-width: 0; }
 /* Anime list items */
 .anime-list-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
   padding: 12px 16px;
-  cursor: pointer;
   position: relative;
+}
+
+.thumb-wrapper {
+  position: relative;
+  flex-shrink: 0;
 }
 
 .anime-thumb {
@@ -267,13 +289,31 @@ ion-header ion-toolbar { --background: #1E1E1E; --border-width: 0; }
   height: 130px;
   border-radius: 12px;
   object-fit: cover;
-  flex-shrink: 0;
   background: #2D2D3A;
+  display: block;
+}
+
+.score-badge {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #A7B8D9, #FF9E9E);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .anime-meta {
   flex: 1;
   min-width: 0;
+  padding-top: 4px;
 }
 
 .anime-name {
@@ -292,18 +332,21 @@ ion-header ion-toolbar { --background: #1E1E1E; --border-width: 0; }
 .anime-season {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.5);
-  margin: 0 0 8px;
+  margin: 0;
 }
 
-.anime-avg {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.4);
-  margin: 0;
+/* Action buttons column */
+.item-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 4px;
 }
 
 /* Status pill */
 .status-pill {
-  flex-shrink: 0;
   padding: 8px 16px;
   border-radius: 10px;
   border: none;
@@ -327,6 +370,24 @@ ion-header ion-toolbar { --background: #1E1E1E; --border-width: 0; }
 .status-check {
   font-size: 18px;
   color: #4CAF50;
+}
+
+.status-icon {
+  font-size: 18px;
+}
+
+/* Rate button */
+.rate-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 158, 158, 0.25);
+  color: #FF9E9E;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
 }
 
 /* Skeleton */

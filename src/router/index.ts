@@ -27,6 +27,7 @@ const routes: Array<RouteRecordRaw> = [
       { path: 'lists/:id', component: () => import('@/views/ListDetailView.vue') },
       { path: 'lists/:id/members', component: () => import('@/views/ListMembersView.vue') },
       { path: 'lists/:id/add-members', component: () => import('@/views/ListAddMembersView.vue') },
+      { path: 'lists/:id/anime/:animeId/ratings', component: () => import('@/views/ListAnimeRatingsView.vue') },
     ],
   },
 

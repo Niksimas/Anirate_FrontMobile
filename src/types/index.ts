@@ -193,6 +193,8 @@ export interface ListAnimeResponse {
   anime_id: number;
   title: string;
   image_url: string;
+  season: string;
+  year: number;
   added_by: number;
   added_at: string;
   ratings?: RatingResponse[];
