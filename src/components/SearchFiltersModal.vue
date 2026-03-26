@@ -19,12 +19,22 @@
         <label class="filter-label">Жанры</label>
         <div class="chip-list">
           <button
-            v-for="g in filters.genres"
+            v-for="g in visibleGenres"
             :key="g.id"
             class="chip"
             :class="{ 'chip--active': selectedGenreIds.has(g.id) }"
             @click="toggleGenre(g.id)"
           >{{ g.title }}</button>
+          <button
+            v-if="!genresExpanded && hiddenGenreCount > 0"
+            class="chip chip--more"
+            @click="showMoreGenres"
+          >ещё +{{ Math.min(GENRES_STEP, hiddenGenreCount) }}</button>
+          <button
+            v-if="genresShowCount > GENRES_STEP"
+            class="chip chip--more"
+            @click="collapseGenres"
+          >свернуть</button>
         </div>
       </div>
 
@@ -75,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { IonPage, IonContent } from '@ionic/vue';
 import type { FiltersResponse } from '@/types';
 
@@ -111,6 +121,21 @@ const draft = reactive({
 });
 
 const selectedGenreIds = ref(new Set(props.current.genreIds));
+
+const GENRES_STEP = 10;
+const genresShowCount = ref(GENRES_STEP);
+const allGenres = computed(() => props.filters?.genres ?? []);
+const visibleGenres = computed(() => allGenres.value.slice(0, genresShowCount.value));
+const hiddenGenreCount = computed(() => Math.max(0, allGenres.value.length - genresShowCount.value));
+const genresExpanded = computed(() => genresShowCount.value >= allGenres.value.length);
+
+function showMoreGenres() {
+  genresShowCount.value = Math.min(genresShowCount.value + GENRES_STEP, allGenres.value.length);
+}
+
+function collapseGenres() {
+  genresShowCount.value = GENRES_STEP;
+}
 
 function toggleGenre(id: number) {
   if (selectedGenreIds.value.has(id)) {
@@ -194,10 +219,13 @@ function reset() {
 .range-row {
   display: flex;
   gap: 10px;
+  overflow: hidden;
 }
 
 .range-input {
   flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
   background: #2D2D3A;
   border: none;
   border-radius: 10px;
@@ -237,6 +265,13 @@ function reset() {
 }
 
 .chip:active { transform: scale(0.97); }
+
+.chip--more {
+  background: rgba(167, 184, 217, 0.15);
+  color: #A7B8D9;
+  border-color: rgba(167, 184, 217, 0.3);
+  font-weight: 600;
+}
 
 .chip--active {
   background: #FF9E9E;

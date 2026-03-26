@@ -8,7 +8,7 @@
       </ion-toolbar>
     </ion-header>
 
-    <ion-content @click="expandedItemId = null">
+    <ion-content>
       <ion-refresher slot="fixed" @ion-refresh="refresh($event)">
         <ion-refresher-content />
       </ion-refresher>
@@ -17,146 +17,119 @@
         <h1 class="page-title">Мои аниме</h1>
       </div>
 
-      <!-- Custom segment -->
+      <!-- Segment tabs -->
       <div class="segment-wrap">
         <div class="custom-segment">
           <button
-            v-for="tab in tabs"
+            v-for="(tab, i) in tabs"
             :key="tab.value"
             class="seg-btn"
             :class="{
-              'seg-btn--active': segment === tab.value,
-              [`seg-btn--${tab.value}`]: segment === tab.value,
+              'seg-btn--active': activeIndex === i,
+              [`seg-btn--${tab.value}`]: activeIndex === i,
             }"
-            @click="onSegmentChange(tab.value)"
+            @click="slideTo(i)"
           >{{ tab.label }}</button>
         </div>
       </div>
 
-      <!-- Skeleton -->
-      <div v-if="loading">
-        <div v-for="i in 5" :key="i" class="anime-list-item">
+      <!-- Skeleton (initial load) -->
+      <div v-if="loading" class="anime-list">
+        <div v-for="i in 6" :key="i" class="anime-item">
           <ion-skeleton-text animated class="skeleton-thumb" />
           <div class="skeleton-text">
-            <ion-skeleton-text animated style="height:18px;width:70%;margin-bottom:6px;" />
-            <ion-skeleton-text animated style="height:14px;width:50%;margin-bottom:10px;" />
-            <ion-skeleton-text animated style="height:13px;width:40%;" />
+            <ion-skeleton-text animated style="height:16px;width:70%;margin-bottom:6px;" />
+            <ion-skeleton-text animated style="height:24px;width:50%;border-radius:12px;" />
           </div>
         </div>
       </div>
 
-      <!-- List -->
-      <div v-else-if="filteredList.length">
-        <div
-          v-for="item in filteredList"
-          :key="item.id"
-          class="anime-list-item"
-          @click="router.push(`/anime/${item.anime_id}`)"
-        >
-          <img :src="fixUrl(item.anime_image_url)" :alt="item.anime_title" class="anime-thumb" />
-          <div class="anime-meta">
-            <p class="anime-name">{{ item.anime_title }}</p>
-            <p class="anime-season">{{ STATUS_LABELS[item.status] }}</p>
-            <p v-if="item.score" class="anime-score">Оценка: {{ item.score }}/10</p>
-          </div>
-
-          <!-- Three dots (only on filtered tabs) -->
-          <button
-            v-if="segment !== 'all' && expandedItemId !== item.id"
-            class="more-btn"
-            @click.stop="expandedItemId = item.id"
-          >
-            <ion-icon :icon="ellipsisHorizontal" />
-          </button>
-
-          <!-- Inline status popup -->
-          <transition name="popup-fade">
+      <!-- Swiper slides -->
+      <swiper-container
+        v-show="!loading"
+        ref="swiperRef"
+        :initial-slide="0"
+        :speed="250"
+        @swiperslidechange="onSlideChange"
+        class="tracking-swiper"
+      >
+        <swiper-slide v-for="(tab, i) in tabs" :key="tab.value" class="tracking-slide">
+          <div v-if="getSlideItems(tab.value).length" class="anime-list">
             <div
-              v-if="expandedItemId === item.id"
-              class="status-popup"
-              @click.stop
+              v-for="item in getSlideItems(tab.value)"
+              :key="item.id"
+              class="anime-item"
+              @click="openSheet(item)"
             >
-              <button
-                v-if="prevStatus(item.status)"
-                class="popup-btn popup-btn--prev"
-                @click.stop="changeStatus(item, prevStatus(item.status)!)"
-              >
-                <ion-icon :icon="chevronBackOutline" class="popup-chevron" />
-                {{ STATUS_LABELS[prevStatus(item.status)!] }}
-              </button>
-              <button
-                v-if="nextStatus(item.status)"
-                class="popup-btn"
-                :class="nextStatus(item.status) === 'completed' ? 'popup-btn--salmon' : 'popup-btn--next'"
-                @click.stop="changeStatus(item, nextStatus(item.status)!)"
-              >
-                {{ STATUS_LABELS[nextStatus(item.status)!] }}
-                <ion-icon :icon="chevronForwardOutline" class="popup-chevron" />
-              </button>
-              <button class="popup-btn popup-btn--delete" @click.stop="confirmRemove(item)">
-                <ion-icon :icon="trashOutline" class="popup-chevron" />
-                Удалить
-              </button>
-              <button class="popup-close" @click.stop="expandedItemId = null">
-                <ion-icon :icon="closeOutline" />
-              </button>
+              <img :src="fixUrl(item.anime_image_url)" :alt="item.anime_title" class="anime-thumb" />
+              <div class="anime-body">
+                <p class="anime-name">{{ item.anime_title }}</p>
+                <div class="anime-meta-row">
+                  <span class="status-badge" :class="`status-badge--${item.status}`">
+                    {{ STATUS_LABELS[item.status] }}
+                  </span>
+                  <span v-if="item.score" class="anime-score">★ {{ item.score }}</span>
+                </div>
+              </div>
             </div>
-          </transition>
-        </div>
-      </div>
+          </div>
 
-      <!-- Empty -->
-      <div v-else class="empty-state">
-        <ion-icon :icon="listOutline" class="empty-icon" />
-        <p>Список пуст</p>
-        <ion-button fill="outline" size="small" @click="router.push('/tabs/search')">
-          Найти аниме
-        </ion-button>
-      </div>
-
-      <ion-infinite-scroll :disabled="noMore" @ion-infinite="loadMore">
-        <ion-infinite-scroll-content />
-      </ion-infinite-scroll>
+          <div v-else class="empty-state">
+            <ion-icon :icon="listOutline" class="empty-icon" />
+            <p class="empty-title">Список пуст</p>
+            <button v-if="i === 0" class="empty-btn" @click="router.push('/tabs/search')">
+              Найти аниме
+            </button>
+          </div>
+        </swiper-slide>
+      </swiper-container>
     </ion-content>
 
-    <ion-alert
-      :is-open="!!removingItem"
-      header="Удалить из трекинга"
-      :message="`Убрать «${removingItem?.anime_title}» из списка?`"
-      :buttons="removeAlertButtons"
-      @did-dismiss="removingItem = null"
-    />
+    <!-- Tracking sheet -->
+    <ion-modal ref="trackingModal" :initial-breakpoint="0.55" :breakpoints="[0, 0.55, 0.85]" @did-dismiss="activeItem = null">
+      <TrackingSheet
+        v-if="activeItem"
+        :anime-id="activeItem.anime_id"
+        :tracking="itemToTracking(activeItem)"
+        :anime-title="activeItem.anime_title"
+        :anime-image-url="fixUrl(activeItem.anime_image_url)"
+        :show-navigate="true"
+        @close="trackingModal?.$el.dismiss()"
+        @saved="onSaved"
+        @removed="onRemoved"
+        @navigate="onNavigate"
+      />
+    </ion-modal>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { onIonViewWillEnter } from '@ionic/vue';
 import { useRouter } from 'vue-router';
 import {
   IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton,
   IonContent, IonRefresher, IonRefresherContent,
-  IonSkeletonText, IonIcon, IonButton, IonAlert,
-  IonInfiniteScroll, IonInfiniteScrollContent,
+  IonSkeletonText, IonIcon, IonModal,
 } from '@ionic/vue';
-import {
-  listOutline, ellipsisHorizontal, trashOutline,
-  chevronBackOutline, chevronForwardOutline, closeOutline,
-} from 'ionicons/icons';
+import { register } from 'swiper/element/bundle';
+import { listOutline } from 'ionicons/icons';
 import { fixUrl } from '@/composables/useImageUrl';
 import { trackingApi } from '@/api/tracking';
-import type { TrackingWithAnime, TrackingStatus } from '@/types';
-import type { InfiniteScrollCustomEvent, RefresherCustomEvent } from '@ionic/vue';
+import TrackingSheet from '@/components/TrackingSheet.vue';
+import type { TrackingWithAnime, TrackingResponse, TrackingStatus } from '@/types';
+import type { RefresherCustomEvent } from '@ionic/vue';
+
+register();
 
 const router = useRouter();
-const segment = ref<'all' | TrackingStatus>('all');
 const items = ref<TrackingWithAnime[]>([]);
 const loading = ref(true);
-const noMore = ref(false);
-const expandedItemId = ref<number | null>(null);
-const removingItem = ref<TrackingWithAnime | null>(null);
-const offset = ref(0);
-const LIMIT = 30;
+const swiperRef = ref();
+const activeIndex = ref(0);
+
+const trackingModal = ref();
+const activeItem = ref<TrackingWithAnime | null>(null);
 
 const tabs = [
   { value: 'all' as const, label: 'Все' },
@@ -171,82 +144,72 @@ const STATUS_LABELS: Record<string, string> = {
   completed: 'Просмотрено',
 };
 
-const filteredList = computed(() =>
-  segment.value === 'all' ? items.value : items.value.filter((i) => i.status === segment.value)
-);
-
-function prevStatus(status: TrackingStatus): TrackingStatus | null {
-  if (status === 'watching') return 'planned';
-  if (status === 'completed') return 'watching';
-  return null;
+function getSlideItems(tabValue: string): TrackingWithAnime[] {
+  return tabValue === 'all' ? items.value : items.value.filter(i => i.status === tabValue);
 }
 
-function nextStatus(status: TrackingStatus): TrackingStatus | null {
-  if (status === 'planned') return 'watching';
-  if (status === 'watching') return 'completed';
-  return null;
+function slideTo(index: number) {
+  activeIndex.value = index;
+  swiperRef.value?.swiper?.slideTo(index);
 }
 
-function onSegmentChange(value: 'all' | TrackingStatus) {
-  segment.value = value;
-  expandedItemId.value = null;
+function onSlideChange(e: CustomEvent) {
+  const swiper = (e.target as any)?.swiper;
+  if (swiper) activeIndex.value = swiper.activeIndex;
 }
 
+function itemToTracking(item: TrackingWithAnime): TrackingResponse {
+  return {
+    id: item.id,
+    anime_id: item.anime_id,
+    status: item.status,
+    score: item.score,
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+  };
+}
+
+function openSheet(item: TrackingWithAnime) {
+  activeItem.value = item;
+  trackingModal.value?.$el.present();
+}
+
+function onSaved(response: TrackingResponse) {
+  trackingModal.value?.$el.dismiss();
+  const idx = items.value.findIndex(i => i.anime_id === response.anime_id);
+  if (idx !== -1) {
+    items.value[idx] = { ...items.value[idx], status: response.status, score: response.score ?? null };
+  }
+}
+
+function onRemoved() {
+  trackingModal.value?.$el.dismiss();
+  if (activeItem.value) {
+    items.value = items.value.filter(i => i.id !== activeItem.value!.id);
+  }
+}
+
+function onNavigate() {
+  trackingModal.value?.$el.dismiss();
+  if (activeItem.value) {
+    router.push(`/anime/${activeItem.value.anime_id}`);
+  }
+}
+
+// ── Data loading ─────────────────────────────────────────────────────────────
 onIonViewWillEnter(load);
 
 async function load() {
   loading.value = true;
-  offset.value = 0;
-  noMore.value = false;
   try {
-    const { data } = await trackingApi.getMyTracking({ limit: LIMIT, offset: 0 });
+    const { data } = await trackingApi.getMyTracking();
     items.value = data;
-    if (data.length < LIMIT) noMore.value = true;
   } finally {
     loading.value = false;
   }
 }
 
 async function refresh(ev: RefresherCustomEvent) { await load(); ev.detail.complete(); }
-
-async function loadMore(ev: InfiniteScrollCustomEvent) {
-  offset.value += LIMIT;
-  const { data } = await trackingApi.getMyTracking({ limit: LIMIT, offset: offset.value });
-  items.value = [...items.value, ...data];
-  if (data.length < LIMIT) noMore.value = true;
-  ev.target.complete();
-}
-
-function confirmRemove(item: TrackingWithAnime) {
-  expandedItemId.value = null;
-  removingItem.value = item;
-}
-
-const removeAlertButtons = [
-  { text: 'Отмена', role: 'cancel' },
-  {
-    text: 'Удалить',
-    role: 'destructive',
-    handler: async () => {
-      if (!removingItem.value) return;
-      await trackingApi.remove(removingItem.value.anime_id);
-      items.value = items.value.filter(i => i.id !== removingItem.value!.id);
-    },
-  },
-];
-
-async function changeStatus(item: TrackingWithAnime, newStatus: TrackingStatus) {
-  expandedItemId.value = null;
-  try {
-    const { data } = await trackingApi.update(item.anime_id, { status: newStatus });
-    const idx = items.value.findIndex((i) => i.id === item.id);
-    if (idx !== -1) {
-      items.value[idx] = { ...items.value[idx], status: data.status, score: data.score ?? null };
-    }
-  } catch (e) {
-    console.error(e);
-  }
-}
 </script>
 
 <style scoped>
@@ -267,9 +230,9 @@ ion-header ion-toolbar {
   letter-spacing: -0.5px;
 }
 
-/* Custom segment */
+/* Segment */
 .segment-wrap {
-  padding: 0 16px 16px;
+  padding: 0 16px 12px;
 }
 
 .custom-segment {
@@ -296,60 +259,63 @@ ion-header ion-toolbar {
   transition: background 0.2s, color 0.2s;
 }
 
-.seg-btn--all {
-  background: #2D2D3A;
-  color: #FFFFFF;
-  font-weight: 600;
+.seg-btn--all { background: #2D2D3A; color: #FFFFFF; font-weight: 600; }
+.seg-btn--planned { background: #697289; color: #FFFFFF; font-weight: 600; }
+.seg-btn--watching { background: #FFFFFF; color: #1A1A1A; font-weight: 600; }
+.seg-btn--completed { background: #FF9E9E; color: #1A1A1A; font-weight: 600; }
+
+/* ── Swiper ──────────────────────────────────────────────────────────────── */
+.tracking-swiper {
+  height: calc(100% - 110px);
 }
 
-.seg-btn--planned {
-  background: #697289;
-  color: #FFFFFF;
-  font-weight: 600;
+.tracking-slide {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  height: 100%;
 }
 
-.seg-btn--watching {
-  background: #FFFFFF;
-  color: #1A1A1A;
-  font-weight: 600;
+/* ── Anime list ──────────────────────────────────────────────────────────── */
+.anime-list {
+  padding: 0 16px;
 }
 
-.seg-btn--completed {
-  background: #FF9E9E;
-  color: #1A1A1A;
-  font-weight: 600;
-}
-
-/* List items */
-.anime-list-item {
+.anime-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 8px 0;
   cursor: pointer;
-  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.anime-item + .anime-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.anime-item:active {
+  opacity: 0.8;
 }
 
 .anime-thumb {
-  width: 100px;
-  height: 130px;
-  border-radius: 12px;
+  width: 64px;
+  height: 90px;
+  border-radius: 10px;
   object-fit: cover;
   flex-shrink: 0;
   background: #2D2D3A;
 }
 
-.anime-meta {
+.anime-body {
   flex: 1;
   min-width: 0;
 }
 
 .anime-name {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   color: #FFFFFF;
-  margin: 0 0 4px;
-  letter-spacing: -0.3px;
+  margin: 0 0 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -357,118 +323,48 @@ ion-header ion-toolbar {
   -webkit-box-orient: vertical;
 }
 
-.anime-season {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.5);
-  margin: 0 0 8px;
-}
-
-.anime-score {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.5);
-  margin: 0;
-}
-
-.more-btn {
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 22px;
-  padding: 8px;
-  cursor: pointer;
-  flex-shrink: 0;
+.anime-meta-row {
   display: flex;
   align-items: center;
-}
-
-/* Status popup */
-.status-popup {
-  position: absolute;
-  right: 16px;
-  top: 12px;
-  display: flex;
-  flex-wrap: wrap;
   gap: 8px;
-  align-items: flex-start;
-  background: rgba(55, 55, 65, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius: 14px;
-  padding: 12px;
-  z-index: 10;
-  max-width: 220px;
 }
 
-.popup-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
+/* ── Status badge ────────────────────────────────────────────────────────── */
+.status-badge {
+  font-size: 12px;
   font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 8px;
   white-space: nowrap;
 }
 
-.popup-btn--prev {
-  background: #4A4A5A;
-  color: #FFFFFF;
+.status-badge--planned {
+  background: rgba(105, 114, 137, 0.25);
+  color: #697289;
 }
 
-.popup-btn--next {
-  background: #F0EDE8;
-  color: #1A1A1A;
+.status-badge--watching {
+  background: rgba(167, 184, 217, 0.2);
+  color: #A7B8D9;
 }
 
-.popup-btn--salmon {
-  background: #FF9E9E;
-  color: #1A1A1A;
+.status-badge--completed {
+  background: rgba(255, 158, 158, 0.2);
+  color: #FF9E9E;
 }
 
-.popup-btn--delete {
-  background: rgba(231, 111, 111, 0.15);
-  color: #E76F6F;
+/* ── Score ────────────────────────────────────────────────────────────────── */
+.anime-score {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
 }
 
-.popup-chevron {
-  font-size: 14px;
-}
-
-.popup-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border: none;
-  border-radius: 10px;
-  background: #4A4A5A;
-  color: #FFFFFF;
-  font-size: 18px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-/* Popup animation */
-.popup-fade-enter-active,
-.popup-fade-leave-active {
-  transition: opacity 0.15s, transform 0.15s;
-}
-
-.popup-fade-enter-from,
-.popup-fade-leave-to {
-  opacity: 0;
-  transform: scale(0.9);
-}
-
-/* Skeleton */
+/* ── Skeleton ────────────────────────────────────────────────────────────── */
 .skeleton-thumb {
-  width: 100px;
-  height: 130px;
-  border-radius: 12px;
+  width: 64px;
+  height: 90px;
+  border-radius: 10px;
   flex-shrink: 0;
   --background: #2D2D3A;
 }
@@ -477,6 +373,7 @@ ion-header ion-toolbar {
   flex: 1;
 }
 
+/* ── Empty state ─────────────────────────────────────────────────────────── */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -492,8 +389,25 @@ ion-header ion-toolbar {
   color: #697289;
 }
 
-.empty-state p {
+.empty-title {
   color: #FFFFFF;
   margin: 0;
+  font-size: 16px;
+  font-weight: 600;
 }
+
+.empty-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #A7B8D9 0%, #FF9E9E 100%);
+  color: #1E1E1E;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.empty-btn:active { opacity: 0.85; }
 </style>

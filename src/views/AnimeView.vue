@@ -27,13 +27,58 @@
           <p class="anime-year">{{ anime.year }}</p>
         </div>
 
+        <!-- Actions (moved up for visibility) -->
+        <div ref="actionsRef" class="actions-group">
+          <!-- Add to list button -->
+          <div class="actions-section">
+            <ion-button expand="block" class="add-btn" @click="openListPicker">
+              Добавить в список
+              <ion-icon slot="end" :icon="addOutline" />
+            </ion-button>
+          </div>
+
+          <!-- Status buttons -->
+          <div class="status-row">
+            <button
+              class="status-btn"
+              :class="{ 'status-btn--active-white': tracking?.status === 'planned' }"
+              @click="setStatus('planned')"
+            >В планах</button>
+            <button
+              class="status-btn"
+              :class="{ 'status-btn--active-white': tracking?.status === 'watching' }"
+              @click="setStatus('watching')"
+            >Смотрю</button>
+            <button
+              class="status-btn"
+              :class="{ 'status-btn--active-salmon': tracking?.status === 'completed' }"
+              @click="setStatus('completed')"
+            >Просмотрено</button>
+          </div>
+
+          <!-- My rating (only when tracked) -->
+          <div v-if="tracking" class="rating-section">
+            <h3 class="rating-label">Моя оценка</h3>
+            <div class="rating-dots">
+              <button
+                v-for="n in 10"
+                :key="n"
+                class="rating-dot"
+                :class="{ active: tracking.score != null && n <= tracking.score }"
+                @click="setScore(n)"
+              >{{ n }}</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Genres -->
         <div v-if="anime.genres?.length" class="genre-wrap">
-          <span
+          <button
             v-for="g in visibleGenres"
             :key="g.id"
-            class="genre-chip"
-          >{{ g.title }}</span>
+            class="genre-chip genre-chip--tappable"
+            @click="router.push({ path: '/tabs/search', query: { genre_id: g.id } })"
+          >{{ g.title }}</button>
           <button
             v-if="!genresExpanded && hiddenGenreCount > 0"
             class="genre-chip genre-chip--more"
@@ -82,48 +127,30 @@
           </div>
         </div>
 
-        <!-- Add to list button -->
-        <div class="actions-section">
-          <ion-button expand="block" class="add-btn" @click="openListPicker">
-            Добавить в список
-            <ion-icon slot="end" :icon="addOutline" />
-          </ion-button>
-        </div>
-
-        <!-- My rating (only when tracked) -->
-        <div v-if="tracking" class="rating-section">
-          <h3 class="rating-label">Моя оценка</h3>
-          <div class="rating-dots">
-            <button
-              v-for="n in 10"
-              :key="n"
-              class="rating-dot"
-              :class="{ active: tracking.score != null && n <= tracking.score }"
-              @click="setScore(n)"
-            >{{ n }}</button>
-          </div>
-        </div>
-
-        <!-- Status buttons -->
-        <div class="status-row">
-          <button
-            class="status-btn"
-            :class="{ 'status-btn--active-white': tracking?.status === 'planned' }"
-            @click="setStatus('planned')"
-          >В планах</button>
-          <button
-            class="status-btn"
-            :class="{ 'status-btn--active-white': tracking?.status === 'watching' }"
-            @click="setStatus('watching')"
-          >Смотрю</button>
-          <button
-            class="status-btn"
-            :class="{ 'status-btn--active-salmon': tracking?.status === 'completed' }"
-            @click="setStatus('completed')"
-          >Просмотрено</button>
-        </div>
+        <div style="height: 32px;" />
       </template>
     </ion-content>
+
+    <!-- Scroll-aware sticky status bar -->
+    <transition name="sticky-fade">
+      <div v-if="showStickyBar" class="sticky-bar">
+        <button
+          class="sticky-btn"
+          :class="{ 'sticky-btn--active-white': tracking?.status === 'planned' }"
+          @click="setStatus('planned')"
+        >В планах</button>
+        <button
+          class="sticky-btn"
+          :class="{ 'sticky-btn--active-white': tracking?.status === 'watching' }"
+          @click="setStatus('watching')"
+        >Смотрю</button>
+        <button
+          class="sticky-btn"
+          :class="{ 'sticky-btn--active-salmon': tracking?.status === 'completed' }"
+          @click="setStatus('completed')"
+        >Просмотрено</button>
+      </div>
+    </transition>
 
     <!-- List picker modal -->
     <ion-modal ref="listPickerModal" :initial-breakpoint="0.55" :breakpoints="[0, 0.55, 0.8]" @did-dismiss="onPickerDismiss">
@@ -138,12 +165,17 @@
         <div v-else-if="!myLists.length" class="lp-empty">
           <ion-icon :icon="albumsOutline" class="lp-empty-icon" />
           <p class="lp-empty-text">У тебя пока нет списков</p>
-          <button class="lp-create-btn" @click="listPickerModal?.$el.dismiss(); toastMsg = 'Создай список на вкладке Списки'">
+          <button class="lp-create-btn" @click="showCreateInPicker = true">
             Создать список
           </button>
         </div>
 
         <div v-else class="lp-list">
+          <!-- Create new list inline -->
+          <button class="lp-item lp-item--create" @click="showCreateInPicker = true">
+            <ion-icon :icon="addOutline" class="lp-create-icon" />
+            <span class="lp-item-name">Создать новый список</span>
+          </button>
           <button
             v-for="list in myLists"
             :key="list.id"
@@ -169,6 +201,14 @@
           </button>
         </div>
       </div>
+    </ion-modal>
+
+    <!-- Create list modal (inline in picker) -->
+    <ion-modal :is-open="showCreateInPicker" :initial-breakpoint="0.5" :breakpoints="[0, 0.5]" @did-dismiss="showCreateInPicker = false">
+      <CreateListSheet
+        @close="showCreateInPicker = false"
+        @created="onListCreatedInPicker"
+      />
     </ion-modal>
 
     <!-- Friends tracking sheet -->
@@ -204,19 +244,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonButton, IonIcon,
-  IonContent, IonSkeletonText, IonModal, IonToast,
+  IonContent, IonSkeletonText, IonModal, IonToast, toastController,
 } from '@ionic/vue';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { addOutline, personOutline, checkmarkCircle, albumsOutline } from 'ionicons/icons';
 import { fixUrl } from '@/composables/useImageUrl';
 import { animeApi } from '@/api/anime';
 import { trackingApi } from '@/api/tracking';
 import { listsApi } from '@/api/lists';
+import CreateListSheet from '@/components/CreateListSheet.vue';
 import { useRouter } from 'vue-router';
-import type { AnimeResponse, TrackingResponse, SharedListBrief, FriendTracking } from '@/types';
+import type { AnimeResponse, TrackingResponse, SharedListBrief, SharedListResponse, FriendTracking } from '@/types';
 
 const STATUS_LABELS: Record<string, string> = {
   planned: 'В планах',
@@ -231,10 +273,14 @@ const tracking = ref<TrackingResponse | null>(null);
 const loading = ref(true);
 const listPickerModal = ref();
 const friendsSheet = ref();
+const actionsRef = ref<HTMLElement | null>(null);
+const showStickyBar = ref(false);
+let observer: IntersectionObserver | null = null;
 const myLists = ref<SharedListBrief[]>([]);
 const listsLoading = ref(false);
 const selectedLists = ref<Set<number>>(new Set());
 const adding = ref(false);
+const showCreateInPicker = ref(false);
 const toastMsg = ref('');
 
 // Social data
@@ -275,7 +321,22 @@ onMounted(async () => {
     }
   } finally {
     loading.value = false;
+
+    // Setup IntersectionObserver for sticky bar after content renders
+    setTimeout(() => {
+      if (actionsRef.value) {
+        observer = new IntersectionObserver(
+          ([entry]) => { showStickyBar.value = !entry.isIntersecting; },
+          { threshold: 0.1 }
+        );
+        observer.observe(actionsRef.value);
+      }
+    }, 100);
   }
+});
+
+onUnmounted(() => {
+  observer?.disconnect();
 });
 
 async function openListPicker() {
@@ -293,6 +354,13 @@ async function openListPicker() {
 function onPickerDismiss() {
   selectedLists.value = new Set();
   myLists.value = [];
+}
+
+function onListCreatedInPicker(data: SharedListResponse) {
+  showCreateInPicker.value = false;
+  myLists.value.unshift({ id: data.id, name: data.name, owner_id: data.owner_id, member_count: 1, anime_count: 0 });
+  // Auto-select the new list
+  selectedLists.value = new Set([data.id]);
 }
 
 function toggleList(id: number) {
@@ -329,15 +397,58 @@ async function setScore(score: number) {
   tracking.value = data;
 }
 
+const STATUS_NAMES: Record<string, string> = {
+  planned: 'В планах',
+  watching: 'Смотрю',
+  completed: 'Просмотрено',
+};
+
 async function setStatus(status: 'planned' | 'watching' | 'completed') {
   if (!anime.value) return;
+  const oldStatus = tracking.value?.status ?? null;
+  const isFirstAdd = !tracking.value;
+
   if (tracking.value) {
+    if (tracking.value.status === status) return;
     const { data } = await trackingApi.update(anime.value.id, { status });
     tracking.value = data;
   } else {
     const { data } = await trackingApi.add({ anime_id: anime.value.id, status });
     tracking.value = data;
   }
+
+  // Haptic
+  try {
+    await Haptics.impact({ style: isFirstAdd ? ImpactStyle.Medium : ImpactStyle.Light });
+  } catch { /* */ }
+
+  // Toast with undo
+  const message = isFirstAdd
+    ? `Добавлено в «${STATUS_NAMES[status]}»`
+    : `Перенесено в «${STATUS_NAMES[status]}»`;
+
+  const toast = await toastController.create({
+    message,
+    duration: 3500,
+    position: 'bottom',
+    buttons: [
+      {
+        text: 'Отменить',
+        role: 'cancel',
+        handler: async () => {
+          if (!anime.value) return;
+          if (oldStatus) {
+            const { data } = await trackingApi.update(anime.value.id, { status: oldStatus });
+            tracking.value = data;
+          } else {
+            await trackingApi.remove(anime.value.id);
+            tracking.value = null;
+          }
+        },
+      },
+    ],
+  });
+  await toast.present();
 }
 </script>
 
@@ -398,6 +509,17 @@ ion-header ion-toolbar {
   font-size: 13px;
   font-family: inherit;
   white-space: nowrap;
+}
+
+.genre-chip--tappable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.genre-chip--tappable:active {
+  background: rgba(167, 184, 217, 0.15);
+  border-color: rgba(167, 184, 217, 0.3);
 }
 
 .genre-chip--more {
@@ -751,6 +873,21 @@ ion-header ion-toolbar {
   background: rgba(167, 184, 217, 0.12);
 }
 
+.lp-item--create {
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  background: transparent;
+  gap: 10px;
+}
+
+.lp-item--create:active {
+  background: rgba(167, 184, 217, 0.08);
+}
+
+.lp-create-icon {
+  font-size: 20px;
+  color: #A7B8D9;
+}
+
 .lp-item-name {
   flex: 1;
   font-size: 15px;
@@ -802,4 +939,49 @@ ion-header ion-toolbar {
 
 .lp-add-btn:active { opacity: 0.85; }
 .lp-add-btn:disabled { opacity: 0.4; }
+
+/* ── Sticky status bar ───────────────────────────────────────────────────── */
+.sticky-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px 16px calc(env(safe-area-inset-bottom, 0px) + 10px);
+  background: rgba(30, 30, 30, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 100;
+}
+
+.sticky-btn {
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: none;
+  background: #2D2D3A;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  text-align: center;
+}
+
+.sticky-btn--active-white { background: #FFFFFF; color: #1E1E1E; font-weight: 600; }
+.sticky-btn--active-salmon { background: #FF9E9E; color: #1E1E1E; font-weight: 600; }
+
+/* Sticky bar transition */
+.sticky-fade-enter-active,
+.sticky-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.sticky-fade-enter-from,
+.sticky-fade-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
+}
 </style>

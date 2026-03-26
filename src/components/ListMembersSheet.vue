@@ -125,7 +125,7 @@ const leaveAlertButtons = [
     handler: async () => {
       await listsApi.leaveList(props.listId);
       emit('close');
-      router.replace('/tabs/lists');
+      router.replace('/tabs/profile');
     },
   },
 ];

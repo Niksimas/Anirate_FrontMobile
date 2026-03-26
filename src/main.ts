@@ -28,7 +28,7 @@ import '@ionic/vue/css/palettes/dark.always.css';
 import './theme/variables.css';
 
 const pinia = createPinia();
-const app = createApp(App).use(IonicVue).use(pinia).use(router);
+const app = createApp(App).use(IonicVue, { hardwareBackButton: false }).use(pinia).use(router);
 
 // Setup token refresh interceptor — redirect to login on refresh failure
 setupRefreshInterceptor(() => {

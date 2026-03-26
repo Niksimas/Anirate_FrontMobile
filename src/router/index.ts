@@ -21,7 +21,6 @@ const routes: Array<RouteRecordRaw> = [
       { path: 'my-anime', component: () => import('@/views/MyAnimeView.vue') },
       { path: 'friends', component: () => import('@/views/FriendsView.vue') },
       // Shared Lists (inside tabs to keep tab bar)
-      { path: 'lists', component: () => import('@/views/ListsView.vue') },
       { path: 'lists/:id', component: () => import('@/views/ListDetailView.vue') },
       { path: 'lists/:id/members', component: () => import('@/views/ListMembersView.vue') },
       { path: 'lists/:id/add-members', component: () => import('@/views/ListAddMembersView.vue') },

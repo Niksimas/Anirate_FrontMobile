@@ -3,7 +3,7 @@
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button text="Назад" default-href="/tabs/lists" />
+          <ion-back-button text="Назад" default-href="/tabs/profile" />
         </ion-buttons>
         <ion-buttons slot="end">
           <ion-button @click="settingsAlert = true">
@@ -324,7 +324,7 @@ const deleteListAlertButtons = [
     role: 'destructive',
     handler: async () => {
       await listsApi.delete(listId);
-      router.replace('/tabs/lists');
+      router.replace('/tabs/profile');
     },
   },
 ];
@@ -336,7 +336,7 @@ const leaveAlertButtons = [
     role: 'destructive',
     handler: async () => {
       await listsApi.leaveList(listId);
-      router.replace('/tabs/lists');
+      router.replace('/tabs/profile');
     },
   },
 ];

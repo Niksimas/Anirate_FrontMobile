@@ -136,7 +136,7 @@ const leaveAlertButtons = [
     role: 'destructive',
     handler: async () => {
       await listsApi.leaveList(listId);
-      router.replace('/tabs/lists');
+      router.replace('/tabs/profile');
     },
   },
 ];

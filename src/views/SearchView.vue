@@ -1,6 +1,6 @@
 <template>
   <ion-page>
-    <ion-content class="search-content">
+    <ion-content ref="contentRef" class="search-content">
       <ion-refresher slot="fixed" @ion-refresh="onRefresh($event)">
         <ion-refresher-content />
       </ion-refresher>
@@ -88,8 +88,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { onIonViewDidEnter } from '@ionic/vue';
 import {
   IonPage, IonContent, IonIcon, IonModal,
   IonRefresher, IonRefresherContent, IonSearchbar, IonSkeletonText,
@@ -105,7 +106,10 @@ import type { AnimeResponse, FiltersResponse } from '@/types';
 import type { InfiniteScrollCustomEvent, RefresherCustomEvent } from '@ionic/vue';
 
 const router = useRouter();
+const route = useRoute();
+const contentRef = ref();
 const query = ref('');
+let isFirstEnter = true;
 const results = ref<AnimeResponse[]>([]);
 const browse = ref<AnimeResponse[]>([]);
 const loading = ref(false);
@@ -172,6 +176,49 @@ onMounted(async () => {
     availableFilters.value = data;
   } catch { /* filters will be empty */ }
 });
+
+function scrollToTop() {
+  contentRef.value?.$el?.scrollToTop(0);
+}
+
+onIonViewDidEnter(() => {
+  // Check genre filter from query param (e.g., from AnimeView genre tap)
+  const genreId = route.query.genre_id ? Number(route.query.genre_id) : null;
+  if (genreId) {
+    router.replace({ path: '/tabs/search' });
+    onClear();
+    resetFilters();
+    appliedGenreIds.value = [genreId];
+    browse.value = [];
+    offset.value = 0;
+    scrollToTop();
+    loadBrowse().then(scrollToTop);
+    return;
+  }
+
+  if (isFirstEnter) {
+    isFirstEnter = false;
+    return;
+  }
+});
+
+// Listen for re-tap on search tab button
+function onSearchTabReset() {
+  // Always scroll to top
+  scrollToTop();
+  // If there's active search, clear it (keep filters)
+  if (query.value.trim() || searched.value) {
+    query.value = '';
+    results.value = [];
+    searched.value = false;
+    offset.value = 0;
+    noMore.value = false;
+    loadBrowse().then(scrollToTop);
+  }
+}
+
+onMounted(() => window.addEventListener('search-tab-reset', onSearchTabReset));
+onUnmounted(() => window.removeEventListener('search-tab-reset', onSearchTabReset));
 
 async function openFiltersModal() {
   if (!availableFilters.value) {

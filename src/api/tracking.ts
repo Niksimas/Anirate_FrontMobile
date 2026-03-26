@@ -28,4 +28,7 @@ export const trackingApi = {
     userId: number,
     params?: { status?: TrackingStatus; limit?: number; offset?: number }
   ) => api.get<TrackingWithAnime[]>(`/api/v1/tracking/user/${userId}`, { params }),
+
+  getUserStats: (userId: number) =>
+    api.get<TrackingStats>(`/api/v1/tracking/user/${userId}/stats`),
 };

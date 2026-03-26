@@ -18,6 +18,9 @@ export const listsApi = {
   getMyLists: () =>
     api.get<SharedListBrief[]>('/api/v1/lists/'),
 
+  getSharedWith: (userId: number) =>
+    api.get<SharedListBrief[]>(`/api/v1/lists/shared/${userId}`),
+
   create: (payload: SharedListCreate) =>
     api.post<SharedListResponse>('/api/v1/lists/', payload),
 
