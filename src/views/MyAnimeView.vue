@@ -53,7 +53,7 @@
           class="anime-list-item"
           @click="router.push(`/anime/${item.anime_id}`)"
         >
-          <img :src="item.anime_image_url" :alt="item.anime_title" class="anime-thumb" />
+          <img :src="fixUrl(item.anime_image_url)" :alt="item.anime_title" class="anime-thumb" />
           <div class="anime-meta">
             <p class="anime-name">{{ item.anime_title }}</p>
             <p class="anime-season">{{ STATUS_LABELS[item.status] }}</p>
@@ -93,6 +93,10 @@
                 {{ STATUS_LABELS[nextStatus(item.status)!] }}
                 <ion-icon :icon="chevronForwardOutline" class="popup-chevron" />
               </button>
+              <button class="popup-btn popup-btn--delete" @click.stop="confirmRemove(item)">
+                <ion-icon :icon="trashOutline" class="popup-chevron" />
+                Удалить
+              </button>
               <button class="popup-close" @click.stop="expandedItemId = null">
                 <ion-icon :icon="closeOutline" />
               </button>
@@ -114,22 +118,32 @@
         <ion-infinite-scroll-content />
       </ion-infinite-scroll>
     </ion-content>
+
+    <ion-alert
+      :is-open="!!removingItem"
+      header="Удалить из трекинга"
+      :message="`Убрать «${removingItem?.anime_title}» из списка?`"
+      :buttons="removeAlertButtons"
+      @did-dismiss="removingItem = null"
+    />
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
+import { onIonViewWillEnter } from '@ionic/vue';
 import { useRouter } from 'vue-router';
 import {
   IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton,
   IonContent, IonRefresher, IonRefresherContent,
-  IonSkeletonText, IonIcon, IonButton,
+  IonSkeletonText, IonIcon, IonButton, IonAlert,
   IonInfiniteScroll, IonInfiniteScrollContent,
 } from '@ionic/vue';
 import {
-  listOutline, ellipsisHorizontal,
+  listOutline, ellipsisHorizontal, trashOutline,
   chevronBackOutline, chevronForwardOutline, closeOutline,
 } from 'ionicons/icons';
+import { fixUrl } from '@/composables/useImageUrl';
 import { trackingApi } from '@/api/tracking';
 import type { TrackingWithAnime, TrackingStatus } from '@/types';
 import type { InfiniteScrollCustomEvent, RefresherCustomEvent } from '@ionic/vue';
@@ -140,6 +154,7 @@ const items = ref<TrackingWithAnime[]>([]);
 const loading = ref(true);
 const noMore = ref(false);
 const expandedItemId = ref<number | null>(null);
+const removingItem = ref<TrackingWithAnime | null>(null);
 const offset = ref(0);
 const LIMIT = 30;
 
@@ -177,7 +192,7 @@ function onSegmentChange(value: 'all' | TrackingStatus) {
   expandedItemId.value = null;
 }
 
-onMounted(load);
+onIonViewWillEnter(load);
 
 async function load() {
   loading.value = true;
@@ -201,6 +216,24 @@ async function loadMore(ev: InfiniteScrollCustomEvent) {
   if (data.length < LIMIT) noMore.value = true;
   ev.target.complete();
 }
+
+function confirmRemove(item: TrackingWithAnime) {
+  expandedItemId.value = null;
+  removingItem.value = item;
+}
+
+const removeAlertButtons = [
+  { text: 'Отмена', role: 'cancel' },
+  {
+    text: 'Удалить',
+    role: 'destructive',
+    handler: async () => {
+      if (!removingItem.value) return;
+      await trackingApi.remove(removingItem.value.anime_id);
+      items.value = items.value.filter(i => i.id !== removingItem.value!.id);
+    },
+  },
+];
 
 async function changeStatus(item: TrackingWithAnime, newStatus: TrackingStatus) {
   expandedItemId.value = null;
@@ -393,6 +426,11 @@ ion-header ion-toolbar {
 .popup-btn--salmon {
   background: #FF9E9E;
   color: #1A1A1A;
+}
+
+.popup-btn--delete {
+  background: rgba(231, 111, 111, 0.15);
+  color: #E76F6F;
 }
 
 .popup-chevron {

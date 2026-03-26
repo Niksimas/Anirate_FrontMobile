@@ -52,7 +52,7 @@
             @click="router.push(`/users/${friend.id}`)"
           >
             <div class="user-avatar">
-              <img v-if="friend.picture" :src="friend.picture" />
+              <img v-if="friend.picture" :src="fixUrl(friend.picture)" />
               <ion-icon v-else :icon="cameraOutline" />
             </div>
             <span class="user-name">{{ friend.full_name || friend.email }}</span>
@@ -84,7 +84,7 @@
         <div v-else-if="sentItems.length">
           <div v-for="item in sentItems" :key="item.requestId" class="user-row">
             <div class="user-avatar">
-              <img v-if="item.picture" :src="item.picture" />
+              <img v-if="item.picture" :src="fixUrl(item.picture)" />
               <ion-icon v-else :icon="cameraOutline" />
             </div>
             <span class="user-name">{{ item.full_name || item.email || `ID ${item.userId}` }}</span>
@@ -114,7 +114,7 @@
         <div v-else-if="incomingItems.length">
           <div v-for="item in incomingItems" :key="item.requestId" class="user-row">
             <div class="user-avatar">
-              <img v-if="item.picture" :src="item.picture" />
+              <img v-if="item.picture" :src="fixUrl(item.picture)" />
               <ion-icon v-else :icon="cameraOutline" />
             </div>
             <span class="user-name">{{ item.full_name || item.email || `ID ${item.userId}` }}</span>
@@ -156,7 +156,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, watch } from 'vue';
+import { onIonViewWillEnter } from '@ionic/vue';
 import { useRouter } from 'vue-router';
 import {
   IonPage, IonContent, IonIcon, IonRefresher, IonRefresherContent,
@@ -165,6 +166,7 @@ import {
 import {
   searchOutline, cameraOutline, peopleOutline, sendOutline, mailOpenOutline,
 } from 'ionicons/icons';
+import { fixUrl } from '@/composables/useImageUrl';
 import { friendsApi } from '@/api/friends';
 import type { FriendResponse, FriendRequestResponse } from '@/types';
 import type { RefresherCustomEvent } from '@ionic/vue';
@@ -204,7 +206,7 @@ const alertButtons = [
   },
 ];
 
-onMounted(loadFriends);
+onIonViewWillEnter(loadFriends);
 
 watch(segment, (val) => {
   if (val === 'sent' && !sentItems.value.length) loadSent();

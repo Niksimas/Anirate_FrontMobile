@@ -705,7 +705,7 @@
           "Anime"
         ],
         "summary": "Get All Anime",
-        "description": "Список аниме с пагинацией. Фильтры: ?year=, ?season=.",
+        "description": "Список аниме с пагинацией и фильтрами.",
         "operationId": "get_all_anime_api_v1_anime__get",
         "parameters": [
           {
@@ -759,6 +759,118 @@
               ],
               "title": "Season"
             }
+          },
+          {
+            "name": "genre_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Genre Id"
+            }
+          },
+          {
+            "name": "year_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year From"
+            }
+          },
+          {
+            "name": "year_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year To"
+            }
+          },
+          {
+            "name": "anime_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Anime Type"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "episodes_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Episodes From"
+            }
+          },
+          {
+            "name": "episodes_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Episodes To"
+            }
           }
         ],
         "responses": {
@@ -782,6 +894,28 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/anime/filters": {
+      "get": {
+        "tags": [
+          "Anime"
+        ],
+        "summary": "Get Filters",
+        "description": "Доступные значения фильтров: жанры, типы, статусы, сезоны, диапазон годов.",
+        "operationId": "get_filters_api_v1_anime_filters_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FiltersResponse"
                 }
               }
             }
@@ -2281,6 +2415,39 @@
             "type": "string",
             "title": "Season"
           },
+          "anime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anime Type"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "episodes_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episodes Count"
+          },
           "genres": {
             "items": {
               "$ref": "#/components/schemas/GenreBase"
@@ -2359,6 +2526,39 @@
             "type": "string",
             "title": "Season"
           },
+          "anime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anime Type"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "episodes_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episodes Count"
+          },
           "genres": {
             "items": {
               "$ref": "#/components/schemas/GenreResponse"
@@ -2384,6 +2584,68 @@
           "created_at"
         ],
         "title": "AnimeResponse"
+      },
+      "FiltersResponse": {
+        "properties": {
+          "genres": {
+            "items": {
+              "$ref": "#/components/schemas/GenreResponse"
+            },
+            "type": "array",
+            "title": "Genres"
+          },
+          "types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Types"
+          },
+          "statuses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Statuses"
+          },
+          "seasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Seasons"
+          },
+          "year_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year Min"
+          },
+          "year_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year Max"
+          }
+        },
+        "type": "object",
+        "required": [
+          "genres",
+          "types",
+          "statuses",
+          "seasons"
+        ],
+        "title": "FiltersResponse"
       },
       "FriendRequestCreate": {
         "properties": {
@@ -2603,6 +2865,28 @@
             "type": "string",
             "title": "Image Url"
           },
+          "season": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
           "added_by": {
             "type": "integer",
             "title": "Added By"
@@ -2725,6 +3009,17 @@
               }
             ],
             "title": "Full Name"
+          },
+          "picture": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Picture"
           },
           "score": {
             "type": "integer",

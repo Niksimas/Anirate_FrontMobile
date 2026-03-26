@@ -12,7 +12,7 @@
       <!-- Avatar + fields row -->
       <div class="avatar-fields-row">
         <div class="avatar-circle">
-          <img v-if="picture" :src="picture" class="avatar-img" />
+          <img v-if="picture" :src="fixUrl(picture)" class="avatar-img" />
           <ion-icon v-else :icon="cameraOutline" class="avatar-icon" />
         </div>
         <div class="fields-stack">
@@ -61,6 +61,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { IonPage, IonContent, IonButton, IonIcon, IonToggle, IonToast } from '@ionic/vue';
 import { cameraOutline } from 'ionicons/icons';
+import { fixUrl } from '@/composables/useImageUrl';
 import { api } from '@/api/axios';
 import { useAuthStore } from '@/stores/auth';
 import type { UserUpdate } from '@/types';

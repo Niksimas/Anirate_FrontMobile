@@ -45,9 +45,33 @@ export interface AnimeResponse {
   title: string;
   image_url: string;
   anime_url?: string | null;
+  description?: string | null;
   year: number;
   season: string;
+  anime_type?: string | null;
+  status?: string | null;
+  episodes_count?: number | null;
+  genres?: GenreResponse[];
   created_at: string;
+}
+
+export interface GenreResponse {
+  id: number;
+  title: string;
+  alias?: string | null;
+}
+
+export interface FiltersResponse {
+  genres: GenreResponse[];
+  types: string[];
+  statuses: string[];
+  seasons: string[];
+  year_min: number | null;
+  year_max: number | null;
+}
+
+export interface SuggestResponse {
+  suggestions: string[];
 }
 
 export interface SearchRequest {
@@ -184,6 +208,7 @@ export interface ListAnimeAdd {
 export interface RatingResponse {
   user_id: number;
   full_name?: string | null;
+  picture?: string | null;
   score: number;
   comment?: string | null;
   updated_at?: string | null;
@@ -193,8 +218,8 @@ export interface ListAnimeResponse {
   anime_id: number;
   title: string;
   image_url: string;
-  season: string;
-  year: number;
+  season?: string | null;
+  year?: number | null;
   added_by: number;
   added_at: string;
   ratings?: RatingResponse[];
@@ -204,4 +229,21 @@ export interface ListAnimeResponse {
 export interface RateRequest {
   score: number;
   comment?: string | null;
+}
+
+// ─── Anime Social ────────────────────────────────────────────────────────────
+
+export interface FriendTracking {
+  user_id: number;
+  full_name?: string | null;
+  picture?: string | null;
+  status: string;
+  score?: number | null;
+}
+
+export interface AnimeSocialResponse {
+  avg_score: number | null;
+  score_count: number;
+  friends_avg_score: number | null;
+  friends_tracking: FriendTracking[];
 }

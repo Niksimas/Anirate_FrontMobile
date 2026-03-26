@@ -22,8 +22,8 @@
       <div class="filter-row">
         <button
           class="filter-pill"
-          :class="{ 'filter-pill--active': hasFilters || filtersOpen }"
-          @click="filtersOpen = !filtersOpen"
+          :class="{ 'filter-pill--active': hasFilters }"
+          @click="openFiltersModal"
         >
           Фильтры{{ activeFilterCount ? ` (${activeFilterCount})` : '' }}
         </button>
@@ -31,63 +31,6 @@
           Сбросить фильтры
         </button>
       </div>
-
-      <!-- Inline filter panel -->
-      <transition name="filter-drop">
-        <div v-if="filtersOpen" class="filter-panel">
-          <h3 class="filter-panel__title">Фильтры</h3>
-
-          <div class="filter-section">
-            <p class="filter-section__label">Год выпуска</p>
-            <div class="year-row">
-              <div class="year-input-wrap">
-                <input
-                  v-model.number="draftYearFrom"
-                  type="number"
-                  placeholder="ГГГГ"
-                  class="year-input"
-                  min="1960"
-                  :max="currentYear"
-                />
-                <ion-icon :icon="calendarOutline" class="year-input-icon" />
-              </div>
-              <div class="year-input-wrap">
-                <input
-                  v-model.number="draftYearTo"
-                  type="number"
-                  placeholder="ГГГГ"
-                  class="year-input"
-                  min="1960"
-                  :max="currentYear"
-                />
-                <ion-icon :icon="calendarOutline" class="year-input-icon" />
-              </div>
-            </div>
-          </div>
-
-          <div class="filter-selector">
-            <span class="filter-selector__label">Жанры</span>
-            <ion-icon :icon="chevronDownOutline" class="filter-selector__arrow" />
-          </div>
-          <div class="filter-selector">
-            <span class="filter-selector__label">Тип</span>
-            <ion-icon :icon="chevronDownOutline" class="filter-selector__arrow" />
-          </div>
-          <div class="filter-selector">
-            <span class="filter-selector__label">Статус</span>
-            <ion-icon :icon="chevronDownOutline" class="filter-selector__arrow" />
-          </div>
-          <div class="filter-selector" style="margin-bottom: 16px">
-            <span class="filter-selector__label">Количество серий</span>
-            <ion-icon :icon="chevronDownOutline" class="filter-selector__arrow" />
-          </div>
-
-          <div class="filter-panel__actions">
-            <button class="panel-btn panel-btn--apply" @click="applyFilters">Применить</button>
-            <button class="panel-btn panel-btn--reset" @click="resetFilters">Очистить выбор</button>
-          </div>
-        </div>
-      </transition>
 
       <!-- Section title when filters active -->
       <p v-if="hasFilters && !loading" class="section-title">Результат поиска</p>
@@ -131,6 +74,16 @@
         <ion-infinite-scroll-content />
       </ion-infinite-scroll>
     </ion-content>
+
+    <!-- Filters modal -->
+    <ion-modal ref="filtersModal" :initial-breakpoint="0.85" :breakpoints="[0, 0.85, 1]">
+      <SearchFiltersModal
+        :filters="availableFilters"
+        :current="currentFilterValues"
+        @apply="onFiltersApply"
+        @close="filtersModal?.$el.dismiss()"
+      />
+    </ion-modal>
   </ion-page>
 </template>
 
@@ -138,14 +91,17 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import {
-  IonPage, IonContent, IonIcon,
+  IonPage, IonContent, IonIcon, IonModal,
   IonRefresher, IonRefresherContent, IonSearchbar, IonSkeletonText,
   IonInfiniteScroll, IonInfiniteScrollContent,
 } from '@ionic/vue';
-import { searchOutline, calendarOutline, chevronDownOutline } from 'ionicons/icons';
+import { searchOutline } from 'ionicons/icons';
 import AnimeCard from '@/components/AnimeCard.vue';
+import SearchFiltersModal from '@/components/SearchFiltersModal.vue';
+import type { FilterValues } from '@/components/SearchFiltersModal.vue';
 import { animeApi } from '@/api/anime';
-import type { AnimeResponse } from '@/types';
+import type { AnimeFilterParams } from '@/api/anime';
+import type { AnimeResponse, FiltersResponse } from '@/types';
 import type { InfiniteScrollCustomEvent, RefresherCustomEvent } from '@ionic/vue';
 
 const router = useRouter();
@@ -159,17 +115,87 @@ const offset = ref(0);
 const noMore = ref(false);
 const LIMIT = 30;
 
-// Filter state
-const filtersOpen = ref(false);
-const filterYear = ref<number | null>(null);
-const draftYearFrom = ref<number | null>(null);
-const draftYearTo = ref<number | null>(null);
-const currentYear = new Date().getFullYear();
+// Filter modal
+const filtersModal = ref();
+const availableFilters = ref<FiltersResponse | null>(null);
 
-const hasFilters = computed(() => !!filterYear.value);
-const activeFilterCount = computed(() => (filterYear.value ? 1 : 0));
+// Applied filters
+const appliedYearFrom = ref<number | null>(null);
+const appliedYearTo = ref<number | null>(null);
+const appliedGenreIds = ref<number[]>([]);
+const appliedType = ref<string | null>(null);
+const appliedStatus = ref<string | null>(null);
+const appliedEpisodesFrom = ref<number | null>(null);
+const appliedEpisodesTo = ref<number | null>(null);
 
-onMounted(loadBrowse);
+const currentFilterValues = computed<FilterValues>(() => ({
+  yearFrom: appliedYearFrom.value,
+  yearTo: appliedYearTo.value,
+  genreIds: appliedGenreIds.value,
+  type: appliedType.value,
+  status: appliedStatus.value,
+  episodesFrom: appliedEpisodesFrom.value,
+  episodesTo: appliedEpisodesTo.value,
+}));
+
+const hasFilters = computed(() =>
+  !!(appliedYearFrom.value || appliedYearTo.value || appliedGenreIds.value.length ||
+     appliedType.value || appliedStatus.value || appliedEpisodesFrom.value || appliedEpisodesTo.value)
+);
+
+const activeFilterCount = computed(() => {
+  let count = 0;
+  if (appliedYearFrom.value || appliedYearTo.value) count++;
+  if (appliedGenreIds.value.length) count++;
+  if (appliedType.value) count++;
+  if (appliedStatus.value) count++;
+  if (appliedEpisodesFrom.value || appliedEpisodesTo.value) count++;
+  return count;
+});
+
+function buildFilterParams(): AnimeFilterParams {
+  return {
+    year_from: appliedYearFrom.value ?? undefined,
+    year_to: appliedYearTo.value ?? undefined,
+    genre_ids: appliedGenreIds.value.length ? appliedGenreIds.value : undefined,
+    anime_type: appliedType.value ?? undefined,
+    status: appliedStatus.value ?? undefined,
+    episodes_from: appliedEpisodesFrom.value ?? undefined,
+    episodes_to: appliedEpisodesTo.value ?? undefined,
+  };
+}
+
+onMounted(async () => {
+  loadBrowse();
+  try {
+    const { data } = await animeApi.getFilters();
+    availableFilters.value = data;
+  } catch { /* filters will be empty */ }
+});
+
+async function openFiltersModal() {
+  if (!availableFilters.value) {
+    try {
+      const { data } = await animeApi.getFilters();
+      availableFilters.value = data;
+    } catch { /* ignore */ }
+  }
+  filtersModal.value?.$el.present();
+}
+
+async function onFiltersApply(values: FilterValues) {
+  appliedYearFrom.value = values.yearFrom;
+  appliedYearTo.value = values.yearTo;
+  appliedGenreIds.value = values.genreIds;
+  appliedType.value = values.type;
+  appliedStatus.value = values.status;
+  appliedEpisodesFrom.value = values.episodesFrom;
+  appliedEpisodesTo.value = values.episodesTo;
+  filtersModal.value?.$el.dismiss();
+  browse.value = [];
+  offset.value = 0;
+  await loadBrowse();
+}
 
 async function loadBrowse() {
   loading.value = true;
@@ -177,12 +203,10 @@ async function loadBrowse() {
   try {
     const { data } = await animeApi.getAll({
       limit: LIMIT, offset: 0,
-      year: filterYear.value ?? undefined,
+      ...buildFilterParams(),
     });
     browse.value = data;
-    if (data.length < LIMIT) {
-      noMore.value = true;
-    }
+    if (data.length < LIMIT) noMore.value = true;
   } catch (e) {
     console.error(e);
   } finally {
@@ -238,12 +262,10 @@ async function loadMore(ev: InfiniteScrollCustomEvent) {
   } else {
     const { data } = await animeApi.getAll({
       limit: LIMIT, offset: offset.value,
-      year: filterYear.value ?? undefined,
+      ...buildFilterParams(),
     });
     browse.value = [...browse.value, ...data];
-    if (data.length < LIMIT) {
-      noMore.value = true;
-    }
+    if (data.length < LIMIT) noMore.value = true;
   }
   ev.target.complete();
 }
@@ -253,19 +275,14 @@ async function onRefresh(ev: RefresherCustomEvent) {
   ev.detail.complete();
 }
 
-async function applyFilters() {
-  filterYear.value = draftYearFrom.value;
-  filtersOpen.value = false;
-  browse.value = [];
-  offset.value = 0;
-  await loadBrowse();
-}
-
 function resetFilters() {
-  filterYear.value = null;
-  draftYearFrom.value = null;
-  draftYearTo.value = null;
-  filtersOpen.value = false;
+  appliedYearFrom.value = null;
+  appliedYearTo.value = null;
+  appliedGenreIds.value = [];
+  appliedType.value = null;
+  appliedStatus.value = null;
+  appliedEpisodesFrom.value = null;
+  appliedEpisodesTo.value = null;
   browse.value = [];
   offset.value = 0;
   loadBrowse();
@@ -276,7 +293,7 @@ function goToAnime(id: number) { router.push(`/anime/${id}`); }
 
 <style scoped>
 .search-content {
-  --background: #111111;
+  --background: #1E1E1E;
 }
 
 /* Search bar */
@@ -332,113 +349,6 @@ function goToAnime(id: number) { router.push(`/anime/${id}`); }
   font-family: inherit;
 }
 
-/* Filter panel */
-.filter-panel {
-  margin: 0 12px 12px;
-  background: #2D2D3A;
-  border-radius: 16px;
-  padding: 20px 16px 16px;
-}
-
-.filter-panel__title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #FFFFFF;
-  margin: 0 0 16px;
-}
-
-.filter-section__label {
-  font-size: 12px;
-  color: rgba(255,255,255,0.5);
-  margin: 0 0 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.year-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.year-input-wrap {
-  flex: 1;
-  position: relative;
-}
-
-.year-input {
-  width: 100%;
-  box-sizing: border-box;
-  background: #3A3A4A;
-  border: none;
-  border-radius: 10px;
-  padding: 12px 36px 12px 14px;
-  color: #FFFFFF;
-  font-size: 14px;
-  font-family: inherit;
-  outline: none;
-}
-
-.year-input::placeholder { color: rgba(255,255,255,0.35); }
-
-.year-input-icon {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 16px;
-  color: rgba(255,255,255,0.4);
-  pointer-events: none;
-}
-
-.filter-selector {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #3A3A4A;
-  border-radius: 10px;
-  padding: 14px;
-  margin-bottom: 8px;
-  cursor: pointer;
-}
-
-.filter-selector__label {
-  font-size: 14px;
-  color: rgba(255,255,255,0.7);
-}
-
-.filter-selector__arrow {
-  font-size: 16px;
-  color: rgba(255,255,255,0.4);
-}
-
-.filter-panel__actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.panel-btn {
-  flex: 1;
-  padding: 12px;
-  border-radius: 12px;
-  border: none;
-  font-size: 14px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.panel-btn--apply {
-  background: #5CB85C;
-  color: #FFFFFF;
-}
-
-.panel-btn--reset {
-  background: #FF9E9E;
-  color: #1A1A1A;
-}
-
 /* Section title */
 .section-title {
   font-size: 18px;
@@ -484,16 +394,4 @@ function goToAnime(id: number) { router.push(`/anime/${id}`); }
 .empty-state p { color: #FFFFFF; margin: 0; }
 .empty-hint { font-size: 0.85rem; color: rgba(255,255,255,0.4) !important; }
 
-/* Animation */
-.filter-drop-enter-active,
-.filter-drop-leave-active {
-  transition: opacity 0.2s, transform 0.2s;
-  transform-origin: top;
-}
-
-.filter-drop-enter-from,
-.filter-drop-leave-to {
-  opacity: 0;
-  transform: scaleY(0.9);
-}
 </style>

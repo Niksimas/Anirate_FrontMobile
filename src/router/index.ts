@@ -3,11 +3,9 @@ import type { RouteRecordRaw } from 'vue-router';
 import { Preferences } from '@capacitor/preferences';
 
 const routes: Array<RouteRecordRaw> = [
-  { path: '/', redirect: '/splash' },
+  { path: '/', redirect: '/login' },
 
   // Auth flow
-  { path: '/splash', component: () => import('@/views/SplashView.vue') },
-  { path: '/onboarding', component: () => import('@/views/OnboardingView.vue') },
   { path: '/login', component: () => import('@/views/LoginView.vue') },
   { path: '/setup', component: () => import('@/views/SetupView.vue'), meta: { requiresAuth: true } },
 
@@ -50,8 +48,12 @@ const router = createRouter({
 // Navigation guard
 router.beforeEach(async (to) => {
   if (to.meta.requiresAuth) {
-    const { value } = await Preferences.get({ key: 'access_token' });
-    if (!value) {
+    try {
+      const { value } = await Preferences.get({ key: 'access_token' });
+      if (!value) {
+        return '/login';
+      }
+    } catch {
       return '/login';
     }
   }

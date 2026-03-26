@@ -143,16 +143,14 @@ ion-back-button {
   --color: #FFFFFF;
 }
 
-/* Floating rounded tab bar */
+/* Tab bar */
 ion-tab-bar {
-  --background: #2D2D3A;
+  --background: #1E1E1E;
   --border: none;
   --color: rgba(255, 255, 255, 0.35);
   --color-selected: #FFFFFF;
-  height: 58px;
-  border-radius: 20px;
-  overflow: hidden;
-  margin: 0 16px calc(env(safe-area-inset-bottom) + 10px);
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 ion-tab-button {

@@ -69,29 +69,10 @@
 
     <!-- Create list modal -->
     <ion-modal ref="createModal" :initial-breakpoint="0.5" :breakpoints="[0, 0.5]">
-      <ion-page>
-        <ion-header>
-          <ion-toolbar>
-            <ion-title>Новый список</ion-title>
-            <ion-buttons slot="end">
-              <ion-button @click="createModal?.$el.dismiss()">Отмена</ion-button>
-            </ion-buttons>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content class="ion-padding">
-          <ion-list lines="none">
-            <ion-item>
-              <ion-input v-model="newName" label="Название" label-placement="stacked" placeholder="Название списка" clearInput />
-            </ion-item>
-            <ion-item>
-              <ion-input v-model="newDesc" label="Описание" label-placement="stacked" placeholder="Необязательно" clearInput />
-            </ion-item>
-          </ion-list>
-          <ion-button expand="block" :disabled="!newName.trim() || creating" style="margin-top:16px;" @click="createList">
-            {{ creating ? 'Создаём...' : 'Создать' }}
-          </ion-button>
-        </ion-content>
-      </ion-page>
+      <CreateListSheet
+        @close="createModal?.$el.dismiss()"
+        @created="onListCreated"
+      />
     </ion-modal>
 
     <ion-toast :is-open="toastOpen" :message="toastMsg" :duration="2500" @did-dismiss="toastOpen=false" />
@@ -99,7 +80,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
+import { onIonViewWillEnter } from '@ionic/vue';
 import { useRouter } from 'vue-router';
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonButton, IonIcon,
@@ -107,22 +89,20 @@ import {
   IonSkeletonText, IonModal, IonInput, IonToast,
 } from '@ionic/vue';
 import { addOutline, albumsOutline, chevronForwardOutline } from 'ionicons/icons';
+import CreateListSheet from '@/components/CreateListSheet.vue';
 import { listsApi } from '@/api/lists';
-import type { SharedListBrief } from '@/types';
+import type { SharedListBrief, SharedListResponse } from '@/types';
 import type { RefresherCustomEvent } from '@ionic/vue';
 
 const router = useRouter();
 const lists = ref<SharedListBrief[]>([]);
 const loading = ref(true);
 const createModal = ref();
-const newName = ref('');
-const newDesc = ref('');
-const creating = ref(false);
 const inviteCode = ref('');
 const toastOpen = ref(false);
 const toastMsg = ref('');
 
-onMounted(load);
+onIonViewWillEnter(load);
 
 async function load() {
   loading.value = true;
@@ -132,16 +112,10 @@ async function load() {
 
 async function refresh(ev: RefresherCustomEvent) { await load(); ev.detail.complete(); }
 
-async function createList() {
-  creating.value = true;
-  try {
-    const { data } = await listsApi.create({ name: newName.value.trim(), description: newDesc.value || null });
-    lists.value.unshift({ id: data.id, name: data.name, owner_id: data.owner_id, member_count: 1, anime_count: 0 });
-    newName.value = '';
-    newDesc.value = '';
-    createModal.value?.$el.dismiss();
-    router.push(`/tabs/lists/${data.id}`);
-  } finally { creating.value = false; }
+function onListCreated(data: SharedListResponse) {
+  lists.value.unshift({ id: data.id, name: data.name, owner_id: data.owner_id, member_count: 1, anime_count: 0 });
+  createModal.value?.$el.dismiss();
+  router.push(`/tabs/lists/${data.id}`);
 }
 
 async function joinByCode() {

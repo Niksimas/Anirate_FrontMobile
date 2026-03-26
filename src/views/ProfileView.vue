@@ -35,7 +35,7 @@
         <!-- Avatar + name -->
         <div class="profile-hero">
           <div class="avatar-circle">
-            <img v-if="user?.picture" :src="user.picture" class="avatar-img" />
+            <img v-if="user?.picture" :src="fixUrl(user.picture)" class="avatar-img" />
             <ion-icon v-else :icon="cameraOutline" class="avatar-icon" />
           </div>
           <h2 class="profile-name">{{ user?.full_name ?? 'Без имени' }}</h2>
@@ -72,7 +72,7 @@
             <img
               v-for="(item, i) in recentAnime.slice(0, 3)"
               :key="item.id"
-              :src="item.anime_image_url"
+              :src="fixUrl(item.anime_image_url)"
               class="recent-thumb"
               :style="{ left: `${i * 28}px`, zIndex: 3 - i }"
             />
@@ -116,43 +116,29 @@
 
     <!-- Create list modal -->
     <ion-modal ref="createModal" :initial-breakpoint="0.5" :breakpoints="[0, 0.5]">
-      <ion-page>
-        <ion-header>
-          <ion-toolbar>
-            <ion-title>Новый список</ion-title>
-            <ion-buttons slot="end">
-              <ion-button @click="createModal?.$el.dismiss()">Отмена</ion-button>
-            </ion-buttons>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content class="ion-padding">
-          <ion-list lines="none">
-            <ion-item>
-              <ion-input v-model="newListName" label="Название" label-placement="stacked" placeholder="Название списка" clearInput />
-            </ion-item>
-          </ion-list>
-          <ion-button expand="block" :disabled="!newListName.trim() || creatingList" style="margin-top:16px;" @click="createList">
-            {{ creatingList ? 'Создаём...' : 'Создать' }}
-          </ion-button>
-        </ion-content>
-      </ion-page>
+      <CreateListSheet
+        @close="createModal?.$el.dismiss()"
+        @created="onListCreated"
+      />
     </ion-modal>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
+import { onIonViewWillEnter } from '@ionic/vue';
 import { useRouter } from 'vue-router';
 import {
   IonPage, IonContent, IonButton, IonIcon, IonRefresher, IonRefresherContent,
-  IonSkeletonText, IonPopover, IonList, IonItem, IonLabel,
-  IonModal, IonHeader, IonToolbar, IonTitle, IonButtons, IonInput,
+  IonSkeletonText, IonPopover, IonList, IonItem, IonLabel, IonModal,
 } from '@ionic/vue';
 import { ellipsisHorizontal, cameraOutline, sparkles } from 'ionicons/icons';
+import CreateListSheet from '@/components/CreateListSheet.vue';
+import { fixUrl } from '@/composables/useImageUrl';
 import { useAuthStore } from '@/stores/auth';
 import { trackingApi } from '@/api/tracking';
 import { listsApi } from '@/api/lists';
-import type { TrackingStats, TrackingWithAnime, SharedListBrief } from '@/types';
+import type { TrackingStats, TrackingWithAnime, SharedListBrief, SharedListResponse } from '@/types';
 import type { RefresherCustomEvent } from '@ionic/vue';
 
 const router = useRouter();
@@ -165,10 +151,8 @@ const lists = ref<SharedListBrief[]>([]);
 const loading = ref(true);
 const listsLoading = ref(true);
 const createModal = ref();
-const newListName = ref('');
-const creatingList = ref(false);
 
-onMounted(load);
+onIonViewWillEnter(load);
 
 async function load() {
   loading.value = true;
@@ -196,20 +180,13 @@ async function refresh(ev: RefresherCustomEvent) {
 }
 
 function openCreateList() {
-  newListName.value = '';
   createModal.value?.$el.present();
 }
 
-async function createList() {
-  creatingList.value = true;
-  try {
-    const { data } = await listsApi.create({ name: newListName.value.trim(), description: null });
-    lists.value.unshift({ id: data.id, name: data.name, owner_id: data.owner_id, member_count: 1, anime_count: 0 });
-    createModal.value?.$el.dismiss();
-    router.push(`/tabs/lists/${data.id}`);
-  } finally {
-    creatingList.value = false;
-  }
+function onListCreated(data: SharedListResponse) {
+  lists.value.unshift({ id: data.id, name: data.name, owner_id: data.owner_id, member_count: 1, anime_count: 0 });
+  createModal.value?.$el.dismiss();
+  router.push(`/tabs/lists/${data.id}`);
 }
 </script>
 

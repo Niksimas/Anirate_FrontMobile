@@ -23,7 +23,7 @@
         <!-- Avatar + name -->
         <div class="profile-hero">
           <div class="avatar-circle">
-            <img v-if="userProfile.picture" :src="userProfile.picture" class="avatar-img" />
+            <img v-if="userProfile.picture" :src="fixUrl(userProfile.picture)" class="avatar-img" />
             <ion-icon v-else :icon="cameraOutline" class="avatar-icon" />
           </div>
           <h2 class="profile-name">{{ userProfile.full_name ?? 'Без имени' }}</h2>
@@ -73,7 +73,7 @@
               <img
                 v-for="(item, i) in tracking.slice(0, 3)"
                 :key="item.id"
-                :src="item.anime_image_url"
+                :src="fixUrl(item.anime_image_url)"
                 class="recent-thumb"
                 :style="{ left: `${i * 28}px`, zIndex: 3 - i }"
               />
@@ -110,13 +110,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
+import { onIonViewWillEnter } from '@ionic/vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonButton, IonIcon,
   IonContent, IonSkeletonText,
 } from '@ionic/vue';
 import { ellipsisHorizontal, cameraOutline, sparkles, lockClosedOutline } from 'ionicons/icons';
+import { fixUrl } from '@/composables/useImageUrl';
 import { friendsApi } from '@/api/friends';
 import { trackingApi } from '@/api/tracking';
 import { listsApi } from '@/api/lists';
@@ -133,7 +135,7 @@ const completedCount = computed(() => tracking.value.filter((t) => t.status === 
 const plannedCount = computed(() => tracking.value.filter((t) => t.status === 'planned').length);
 const watchingCount = computed(() => tracking.value.filter((t) => t.status === 'watching').length);
 
-onMounted(async () => {
+onIonViewWillEnter(async () => {
   const userId = Number(route.params.id);
   try {
     const { data } = await friendsApi.getUser(userId);

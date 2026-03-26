@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Anirate</string>
-    <string name="title_activity_main">Anirate</string>
+    <string name="app_name">АниРейт</string>
+    <string name="title_activity_main">АниРейт</string>
     <string name="package_name">com.anirates.app</string>
     <string name="custom_url_scheme">com.anirates.app</string>
 </resources>

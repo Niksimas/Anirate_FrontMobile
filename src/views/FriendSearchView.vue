@@ -32,7 +32,7 @@
       <div v-else-if="results.length">
         <div v-for="user in results" :key="user.id" class="user-row">
           <div class="user-avatar">
-            <img v-if="user.picture" :src="user.picture" />
+            <img v-if="user.picture" :src="fixUrl(user.picture)" />
             <ion-icon v-else :icon="cameraOutline" />
           </div>
           <span class="user-name">{{ user.full_name || user.email }}</span>
@@ -63,6 +63,7 @@ import {
   IonContent, IonIcon, IonSkeletonText, IonToast,
 } from '@ionic/vue';
 import { cameraOutline, personAddOutline, personOutline } from 'ionicons/icons';
+import { fixUrl } from '@/composables/useImageUrl';
 import { friendsApi } from '@/api/friends';
 import type { UserOut } from '@/types';
 

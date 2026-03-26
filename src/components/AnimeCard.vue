@@ -1,7 +1,7 @@
 <template>
   <div class="anime-card" @click="$emit('click')">
     <div class="anime-card__poster">
-      <img :src="anime.image_url" :alt="anime.title" loading="lazy" />
+      <img :src="fixUrl(anime.image_url)" :alt="anime.title" loading="lazy" />
       <div class="anime-card__overlay">
         <span class="anime-card__score">8.9/10</span>
         <span v-if="anime.year" class="anime-card__year">{{ anime.year }}</span>
@@ -16,6 +16,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { fixUrl } from '@/composables/useImageUrl';
 import type { AnimeResponse, TrackingStatus } from '@/types';
 
 const props = defineProps<{

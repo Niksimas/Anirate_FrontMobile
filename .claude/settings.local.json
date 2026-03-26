@@ -7,7 +7,11 @@
       "Bash(cmd.exe //c \"winget --version\" 2>&1)",
       "Bash(ipconfig)",
       "Bash(curl -s http://localhost:8000/openapi.json)",
-      "Bash(python3 -c \":*)"
+      "Bash(python3 -c \":*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(grep -r backButton /c/Me/code/mobile/Anirate_FrontMobile/src --include=*.ts --include=*.js)",
+      "Bash(npm install:*)",
+      "WebSearch"
     ]
   }
 }

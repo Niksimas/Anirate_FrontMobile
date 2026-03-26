@@ -1,7 +1,7 @@
 <template>
   <ion-page>
     <ion-content :fullscreen="true" class="login-content">
-      <div class="login-inner">
+      <div v-if="!checking" class="login-inner">
         <div class="login-hero">
           <div class="login-glow" />
           <img src="/logo.png" alt="Anirate" class="logo-img" />
@@ -50,10 +50,29 @@ const isNative = Capacitor.isNativePlatform();
 const router = useRouter();
 const authStore = useAuthStore();
 const loading = ref(false);
+const checking = ref(true);
 const error = ref('');
 const googleBtnRef = ref<HTMLElement | null>(null);
 
 onMounted(async () => {
+  // Check existing session first
+  try {
+    const hasToken = await authStore.loadTokens();
+    if (hasToken) {
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
+      await Promise.race([authStore.fetchMe(), timeout]);
+      if (!authStore.user?.full_name) {
+        await router.replace('/setup');
+      } else {
+        await router.replace('/tabs/');
+      }
+      return;
+    }
+  } catch {
+    // Token missing, expired, or network timeout — stay on login
+  }
+  checking.value = false;
+
   if (!isNative) {
     await loadGisScript();
     const google = (window as any).google;

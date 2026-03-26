@@ -31,7 +31,7 @@
       <div v-else>
         <div v-for="friend in friends" :key="friend.user_id" class="friend-row">
           <div class="friend-avatar">
-            <img v-if="friend.picture" :src="friend.picture" />
+            <img v-if="friend.picture" :src="fixUrl(friend.picture)" />
             <ion-icon v-else :icon="cameraOutline" class="avatar-placeholder-icon" />
           </div>
           <span class="friend-name">{{ friend.full_name || `Пользователь #${friend.user_id}` }}</span>
@@ -49,6 +49,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonContent, IonIcon, IonSkeletonText } from '@ionic/vue';
 import { cameraOutline, personAddOutline, checkmarkOutline } from 'ionicons/icons';
+import { fixUrl } from '@/composables/useImageUrl';
 import { listsApi } from '@/api/lists';
 import type { AddableFriendResponse } from '@/types';
 
@@ -79,12 +80,12 @@ async function addMember(friend: AddableFriendResponse) {
 
 <style scoped>
 ion-header ion-toolbar {
-  --background: #111111;
+  --background: #1E1E1E;
   --border-width: 0;
 }
 
 .add-members-content {
-  --background: #111111;
+  --background: #1E1E1E;
 }
 
 .add-header {

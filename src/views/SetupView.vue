@@ -8,7 +8,7 @@
 
         <div class="avatar-section">
           <div class="avatar-circle">
-            <img v-if="picture" :src="picture" alt="Avatar" class="avatar-img" />
+            <img v-if="picture" :src="fixUrl(picture)" alt="Avatar" class="avatar-img" />
             <ion-icon v-else :icon="cameraOutline" class="avatar-icon" />
           </div>
           <div class="username-input-wrap">
@@ -56,6 +56,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { IonPage, IonContent, IonButton, IonItem, IonInput, IonIcon } from '@ionic/vue';
 import { cameraOutline, sparklesOutline } from 'ionicons/icons';
+import { fixUrl } from '@/composables/useImageUrl';
 import { api } from '@/api/axios';
 import { useAuthStore } from '@/stores/auth';
 import type { UserUpdate } from '@/types';

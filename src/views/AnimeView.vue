@@ -5,11 +5,6 @@
         <ion-buttons slot="start">
           <ion-back-button default-href="/tabs/search" text="Назад" />
         </ion-buttons>
-        <ion-buttons slot="end">
-          <ion-button fill="clear">
-            <ion-icon slot="icon-only" :icon="ellipsisHorizontal" />
-          </ion-button>
-        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
@@ -23,7 +18,7 @@
       <template v-else-if="anime">
         <!-- Poster centered -->
         <div class="poster-wrap">
-          <img :src="anime.image_url" :alt="anime.title" class="poster-img" />
+          <img :src="fixUrl(anime.image_url)" :alt="anime.title" class="poster-img" />
         </div>
 
         <!-- Title + year -->
@@ -32,30 +27,57 @@
           <p class="anime-year">{{ anime.year }}</p>
         </div>
 
+        <!-- Genres -->
+        <div v-if="anime.genres?.length" class="genre-wrap">
+          <span
+            v-for="g in visibleGenres"
+            :key="g.id"
+            class="genre-chip"
+          >{{ g.title }}</span>
+          <button
+            v-if="!genresExpanded && hiddenGenreCount > 0"
+            class="genre-chip genre-chip--more"
+            @click="genresExpanded = true"
+          >ещё +{{ hiddenGenreCount }}</button>
+          <button
+            v-if="genresExpanded && hiddenGenreCount > 0"
+            class="genre-chip genre-chip--more"
+            @click="genresExpanded = false"
+          >свернуть</button>
+        </div>
+
         <!-- 3 stat cards -->
         <div class="stat-cards">
           <div class="stat-card">
             <span class="stat-card-label">Оценка<br>друзей</span>
-            <span class="stat-card-value">—</span>
+            <span v-if="friendsAvgScore !== null" class="stat-card-value stat-card-value--gradient">
+              {{ friendsAvgScore }}
+            </span>
+            <span v-else class="stat-card-value stat-card-value--muted">—</span>
           </div>
           <div class="stat-card">
             <span class="stat-card-label">Оценка<br>пользователей</span>
-            <span class="stat-card-value">—</span>
+            <span v-if="usersAvgScore !== null" class="stat-card-value stat-card-value--gradient">
+              {{ usersAvgScore }}
+            </span>
+            <span v-else class="stat-card-value stat-card-value--muted">—</span>
           </div>
-          <div class="stat-card">
-            <span class="stat-card-label">В списках<br>у друзей</span>
-            <div class="friends-avatars">
+          <div class="stat-card stat-card--tappable" @click="friendsCount > 0 && friendsSheet?.$el.present()">
+            <span class="stat-card-label">У друзей<br>в трекинге</span>
+            <span v-if="friendsCount > 0" class="stat-card-value stat-card-value--gradient">
+              {{ friendsCount }}
+            </span>
+            <span v-else class="stat-card-value stat-card-value--muted">—</span>
+            <div v-if="friendsTracking.length" class="friends-avatars">
               <div
-                v-for="(item, i) in friendsLists.slice(0, 3)"
-                :key="item.id"
+                v-for="(f, i) in friendsTracking.slice(0, 3)"
+                :key="f.user_id"
                 class="friends-avatar"
                 :style="{ left: `${i * 14}px`, zIndex: 3 - i }"
               >
-                <img v-if="item.picture" :src="item.picture" />
+                <img v-if="f.picture" :src="fixUrl(f.picture)" />
                 <ion-icon v-else :icon="personOutline" />
               </div>
-              <span v-if="friendsLists.length > 3" class="friends-more">+{{ friendsLists.length - 3 }}</span>
-              <span v-if="!friendsLists.length" class="stat-card-value" style="position:static;">—</span>
             </div>
           </div>
         </div>
@@ -106,14 +128,19 @@
     <!-- List picker modal -->
     <ion-modal ref="listPickerModal" :initial-breakpoint="0.55" :breakpoints="[0, 0.55, 0.8]" @did-dismiss="onPickerDismiss">
       <div class="lp-sheet">
-        <h2 class="lp-title">Списки</h2>
+        <div class="lp-handle-row"><div class="lp-handle" /></div>
+        <h2 class="lp-title">Добавить в список</h2>
 
         <div v-if="listsLoading" class="lp-loading">
-          <ion-skeleton-text v-for="i in 3" :key="i" animated style="height:52px;border-radius:12px;margin-bottom:12px;" />
+          <ion-skeleton-text v-for="i in 3" :key="i" animated style="height:52px;border-radius:12px;margin-bottom:10px;--background:#383848;" />
         </div>
 
         <div v-else-if="!myLists.length" class="lp-empty">
-          <p>У тебя пока нет списков</p>
+          <ion-icon :icon="albumsOutline" class="lp-empty-icon" />
+          <p class="lp-empty-text">У тебя пока нет списков</p>
+          <button class="lp-create-btn" @click="listPickerModal?.$el.dismiss(); toastMsg = 'Создай список на вкладке Списки'">
+            Создать список
+          </button>
         </div>
 
         <div v-else class="lp-list">
@@ -133,9 +160,41 @@
         </div>
 
         <div v-if="myLists.length && !listsLoading" class="lp-actions">
-          <button class="lp-btn lp-btn--add" @click="addSelectedToLists">Добавить</button>
-          <button class="lp-btn lp-btn--all" @click="selectAll">Выбрать все</button>
-          <button class="lp-btn lp-btn--clear" @click="selectedLists = new Set()">Очистить</button>
+          <button
+            class="lp-add-btn"
+            :disabled="!selectedLists.size || adding"
+            @click="addSelectedToLists"
+          >
+            {{ adding ? 'Добавляю...' : `Добавить${selectedLists.size ? ` (${selectedLists.size})` : ''}` }}
+          </button>
+        </div>
+      </div>
+    </ion-modal>
+
+    <!-- Friends tracking sheet -->
+    <ion-modal ref="friendsSheet" :initial-breakpoint="0.45" :breakpoints="[0, 0.45, 0.8]">
+      <div class="fs-sheet">
+        <div class="fs-handle-row"><div class="fs-handle" /></div>
+        <p class="fs-title">У друзей в трекинге</p>
+
+        <div v-if="!friendsTracking.length" class="fs-empty">
+          <p>Ни один из друзей пока не добавил это аниме</p>
+        </div>
+
+        <div v-else class="fs-list">
+          <div
+            v-for="f in friendsTracking"
+            :key="f.user_id"
+            class="fs-row"
+            @click="router.push(`/users/${f.user_id}`); friendsSheet?.$el.dismiss()"
+          >
+            <img v-if="f.picture" :src="fixUrl(f.picture)" class="fs-avatar" />
+            <div v-else class="fs-avatar fs-avatar--placeholder">{{ (f.full_name ?? '?')[0] }}</div>
+            <div class="fs-info">
+              <span class="fs-name">{{ f.full_name ?? `#${f.user_id}` }}</span>
+              <span class="fs-status">{{ STATUS_LABELS[f.status] ?? f.status }}{{ f.score != null ? ` · ${f.score}/10` : '' }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </ion-modal>
@@ -145,35 +204,61 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonButton, IonIcon,
   IonContent, IonSkeletonText, IonModal, IonToast,
 } from '@ionic/vue';
-import { ellipsisHorizontal, addOutline, personOutline, checkmarkCircle } from 'ionicons/icons';
+import { addOutline, personOutline, checkmarkCircle, albumsOutline } from 'ionicons/icons';
+import { fixUrl } from '@/composables/useImageUrl';
 import { animeApi } from '@/api/anime';
 import { trackingApi } from '@/api/tracking';
 import { listsApi } from '@/api/lists';
-import type { AnimeResponse, TrackingResponse, SharedListBrief } from '@/types';
+import { useRouter } from 'vue-router';
+import type { AnimeResponse, TrackingResponse, SharedListBrief, FriendTracking } from '@/types';
+
+const STATUS_LABELS: Record<string, string> = {
+  planned: 'В планах',
+  watching: 'Смотрю',
+  completed: 'Просмотрено',
+};
 
 const route = useRoute();
+const router = useRouter();
 const anime = ref<AnimeResponse | null>(null);
 const tracking = ref<TrackingResponse | null>(null);
 const loading = ref(true);
 const listPickerModal = ref();
+const friendsSheet = ref();
 const myLists = ref<SharedListBrief[]>([]);
 const listsLoading = ref(false);
 const selectedLists = ref<Set<number>>(new Set());
+const adding = ref(false);
 const toastMsg = ref('');
-const friendsLists = ref<{ id: number; name: string; memberName: string; picture?: string }[]>([]);
+
+// Social data
+const friendsTracking = ref<FriendTracking[]>([]);
+const friendsAvgScore = ref<string | null>(null);
+const usersAvgScore = ref<string | null>(null);
+const friendsCount = computed(() => friendsTracking.value.length);
+
+const VISIBLE_GENRES = 5;
+const genresExpanded = ref(false);
+const visibleGenres = computed(() =>
+  genresExpanded.value ? anime.value?.genres ?? [] : (anime.value?.genres ?? []).slice(0, VISIBLE_GENRES)
+);
+const hiddenGenreCount = computed(() =>
+  Math.max(0, (anime.value?.genres?.length ?? 0) - VISIBLE_GENRES)
+);
 
 onMounted(async () => {
   const id = Number(route.params.id);
   try {
-    const [animeRes, trackingRes] = await Promise.allSettled([
+    const [animeRes, trackingRes, socialRes] = await Promise.allSettled([
       animeApi.getById(id),
       trackingApi.getMyTracking(),
+      animeApi.getSocial(id),
     ]);
     if (animeRes.status === 'fulfilled') anime.value = animeRes.value.data;
     if (trackingRes.status === 'fulfilled') {
@@ -181,6 +266,12 @@ onMounted(async () => {
       if (found) {
         tracking.value = { id: found.id, anime_id: found.anime_id, status: found.status, score: found.score, created_at: found.created_at, updated_at: found.updated_at };
       }
+    }
+    if (socialRes.status === 'fulfilled') {
+      const social = socialRes.value.data;
+      usersAvgScore.value = social.avg_score != null ? social.avg_score.toFixed(1) : null;
+      friendsAvgScore.value = social.friends_avg_score != null ? social.friends_avg_score.toFixed(1) : null;
+      friendsTracking.value = social.friends_tracking;
     }
   } finally {
     loading.value = false;
@@ -217,15 +308,19 @@ function selectAll() {
 
 async function addSelectedToLists() {
   if (!anime.value || !selectedLists.value.size) return;
-  let added = 0;
-  for (const listId of selectedLists.value) {
-    try {
-      await listsApi.addAnime(listId, { anime_id: anime.value.id });
-      added++;
-    } catch { /* already added or error */ }
+  adding.value = true;
+  try {
+    const results = await Promise.allSettled(
+      [...selectedLists.value].map(listId =>
+        listsApi.addAnime(listId, { anime_id: anime.value!.id })
+      )
+    );
+    const added = results.filter(r => r.status === 'fulfilled').length;
+    listPickerModal.value?.$el.dismiss();
+    toastMsg.value = added ? `Добавлено в ${added} ${added === 1 ? 'список' : 'списков'}` : 'Уже добавлено во все выбранные списки';
+  } finally {
+    adding.value = false;
   }
-  listPickerModal.value?.$el.dismiss();
-  toastMsg.value = added ? `Добавлено в ${added} ${added === 1 ? 'список' : 'списков'}` : 'Уже добавлено во все выбранные списки';
 }
 
 async function setScore(score: number) {
@@ -286,6 +381,38 @@ ion-header ion-toolbar {
   margin: 0;
 }
 
+/* Genres */
+.genre-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 16px 16px;
+}
+
+.genre-chip {
+  padding: 6px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.genre-chip--more {
+  background: rgba(167, 184, 217, 0.15);
+  color: #A7B8D9;
+  border-color: rgba(167, 184, 217, 0.3);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  font-weight: 600;
+}
+
+.genre-chip--more:active {
+  background: rgba(167, 184, 217, 0.25);
+}
+
 .stat-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -308,22 +435,43 @@ ion-header ion-toolbar {
   line-height: 1.4;
 }
 
+.stat-card--tappable {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.stat-card--tappable:active {
+  background: #383848;
+}
+
 .stat-card-value {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #FFFFFF;
 }
 
+.stat-card-value--gradient {
+  background: linear-gradient(135deg, #A7B8D9 0%, #FF9E9E 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stat-card-value--muted {
+  color: rgba(255, 255, 255, 0.25);
+}
+
 .friends-avatars {
   position: relative;
-  height: 28px;
-  min-width: 60px;
+  height: 20px;
+  min-width: 50px;
+  margin-top: 2px;
 }
 
 .friends-avatar {
   position: absolute;
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #4A4A5A;
   overflow: hidden;
@@ -335,15 +483,106 @@ ion-header ion-toolbar {
 }
 
 .friends-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.friends-avatar ion-icon { font-size: 14px; color: rgba(255,255,255,0.5); }
+.friends-avatar ion-icon { font-size: 10px; color: rgba(255,255,255,0.5); }
 
-.friends-more {
-  position: absolute;
-  left: 46px;
-  top: 6px;
-  font-size: 11px;
+/* Friends sheet */
+.fs-sheet {
+  background: #1E1E1E;
+  padding: 0 20px 20px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.fs-handle-row {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 4px;
+}
+
+.fs-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.fs-title {
+  font-size: 20px;
   font-weight: 700;
-  color: rgba(255,255,255,0.7);
+  color: #FFFFFF;
+  margin: 12px 0 16px;
+}
+
+.fs-empty {
+  padding: 32px 0;
+  text-align: center;
+}
+
+.fs-empty p {
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0;
+  font-size: 15px;
+}
+
+.fs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #2D2D3A;
+  border-radius: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fs-row:active {
+  background: #383848;
+}
+
+.fs-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.fs-avatar--placeholder {
+  background: #383848;
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.fs-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.fs-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #FFFFFF;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fs-status {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .actions-section { padding: 0 16px 16px; }
@@ -419,51 +658,97 @@ ion-header ion-toolbar {
 
 /* List picker sheet */
 .lp-sheet {
-  background: #2D2D3A;
-  padding: 24px 20px 20px;
+  background: #1E1E1E;
+  padding: 0 20px 20px;
   height: 100%;
   overflow-y: auto;
 }
 
+.lp-handle-row {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 4px;
+}
+
+.lp-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .lp-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: #FFFFFF;
-  margin: 0 0 18px;
+  margin: 12px 0 16px;
 }
 
 .lp-loading { padding: 4px 0; }
 
 .lp-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 40px 0;
+  padding: 32px 0;
+  gap: 8px;
+  text-align: center;
 }
 
-.lp-empty p {
-  color: rgba(255, 255, 255, 0.5);
+.lp-empty-icon {
+  font-size: 44px;
+  color: #697289;
+  margin-bottom: 4px;
+}
+
+.lp-empty-text {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.45);
   margin: 0;
 }
+
+.lp-create-btn {
+  margin-top: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #A7B8D9 0%, #FF9E9E 100%);
+  color: #1E1E1E;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lp-create-btn:active { opacity: 0.85; }
 
 .lp-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .lp-item {
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 16px 18px;
+  padding: 14px 16px;
   border: none;
   border-radius: 12px;
-  background: #3A3A4A;
+  background: #2D2D3A;
   cursor: pointer;
   font-family: inherit;
   text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+
+.lp-item:active { background: #383848; }
+
+.lp-item--selected {
+  background: rgba(167, 184, 217, 0.12);
 }
 
 .lp-item-name {
@@ -481,51 +766,40 @@ ion-header ion-toolbar {
 }
 
 .lp-check-off {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.25);
 }
 
 .lp-check-on {
-  font-size: 26px;
-  color: #4CAF50;
+  font-size: 24px;
+  background: linear-gradient(135deg, #A7B8D9 0%, #FF9E9E 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-/* Action buttons */
+/* Actions */
 .lp-actions {
-  display: flex;
-  gap: 8px;
-  padding-top: 4px;
-  flex-wrap: wrap;
+  padding-bottom: env(safe-area-inset-bottom, 8px);
 }
 
-.lp-btn {
-  flex: 1;
-  min-width: 0;
-  padding: 12px 8px;
+.lp-add-btn {
+  width: 100%;
+  height: 48px;
   border: none;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #A7B8D9 0%, #FF9E9E 100%);
+  color: #1E1E1E;
+  font-size: 16px;
+  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  white-space: nowrap;
-  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
 }
 
-.lp-btn--add {
-  background: #5CB85C;
-  color: #FFFFFF;
-}
-
-.lp-btn--all {
-  background: #F0AD4E;
-  color: #FFFFFF;
-}
-
-.lp-btn--clear {
-  background: #E86B6B;
-  color: #FFFFFF;
-}
+.lp-add-btn:active { opacity: 0.85; }
+.lp-add-btn:disabled { opacity: 0.4; }
 </style>
