@@ -8,21 +8,10 @@
       <!-- Top actions -->
       <div class="top-bar">
         <div />
-        <ion-button fill="clear" class="more-btn" id="profile-popover-trigger">
-          <ion-icon :icon="ellipsisHorizontal" />
+        <ion-button fill="clear" class="more-btn" @click="router.push('/settings')">
+          <ion-icon :icon="settingsOutline" />
         </ion-button>
       </div>
-
-      <ion-popover trigger="profile-popover-trigger" :dismiss-on-select="true">
-        <ion-list lines="none">
-          <ion-item button @click="router.push('/settings')">
-            <ion-label>Настройки профиля</ion-label>
-          </ion-item>
-          <ion-item button>
-            <ion-label>Поддержка</ion-label>
-          </ion-item>
-        </ion-list>
-      </ion-popover>
 
       <template v-if="loading">
         <div class="skeleton-header">
@@ -103,7 +92,17 @@
             class="list-card list-card--cover"
             @click="router.push(`/tabs/lists/${list.id}`)"
           >
-            <div class="list-cover-placeholder" />
+            <div class="list-collage" :class="`list-collage--${Math.min(list.preview_images?.length ?? 0, 4)}`">
+              <img
+                v-for="(img, i) in (list.preview_images ?? []).slice(0, 4)"
+                :key="i"
+                :src="fixUrl(img)"
+                class="collage-img"
+              />
+              <div v-if="!list.preview_images?.length" class="collage-empty">
+                <ion-icon :icon="sparkles" />
+              </div>
+            </div>
             <div class="list-card-footer">
               <span class="list-card-name">{{ list.name }}</span>
             </div>
@@ -130,9 +129,9 @@ import { onIonViewWillEnter } from '@ionic/vue';
 import { useRouter } from 'vue-router';
 import {
   IonPage, IonContent, IonButton, IonIcon, IonRefresher, IonRefresherContent,
-  IonSkeletonText, IonPopover, IonList, IonItem, IonLabel, IonModal,
+  IonSkeletonText, IonModal,
 } from '@ionic/vue';
-import { ellipsisHorizontal, cameraOutline, sparkles } from 'ionicons/icons';
+import { settingsOutline, cameraOutline, sparkles } from 'ionicons/icons';
 import CreateListSheet from '@/components/CreateListSheet.vue';
 import { fixUrl } from '@/composables/useImageUrl';
 import { useAuthStore } from '@/stores/auth';
@@ -371,9 +370,10 @@ function onListCreated(data: SharedListResponse) {
 .list-card {
   border-radius: 16px;
   overflow: hidden;
-  aspect-ratio: 1;
+  aspect-ratio: 1 / 1;
   cursor: pointer;
   position: relative;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .list-card--create {
@@ -399,10 +399,58 @@ function onListCreated(data: SharedListResponse) {
 
 .list-card--cover { background: #2D2D3A; }
 
-.list-cover-placeholder {
+/* ── Collage ─────────────────────────────────────────────────────────────── */
+.list-collage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  overflow: hidden;
+}
+
+.list-collage--0 {
+  grid-template-columns: 1fr;
+}
+
+.list-collage--1 {
+  grid-template-columns: 1fr;
+}
+
+.list-collage--2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.list-collage--3 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.list-collage--3 .collage-img:first-child {
+  grid-row: 1 / 3;
+}
+
+.list-collage--4 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.collage-img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  object-fit: cover;
+  display: block;
+}
+
+.collage-empty {
   width: 100%;
   height: 100%;
   background: #383848;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.15);
+  font-size: 28px;
 }
 
 .list-card-footer {

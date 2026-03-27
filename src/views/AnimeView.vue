@@ -24,7 +24,7 @@
         <!-- Title + year -->
         <div class="anime-info">
           <h1 class="anime-title">{{ anime.title }}</h1>
-          <p class="anime-year">{{ anime.year }}</p>
+          <p class="anime-year">{{ [formatAnimeType(anime.anime_type), anime.year].filter(Boolean).join(' · ') }}</p>
         </div>
 
         <!-- Actions (moved up for visibility) -->
@@ -253,6 +253,7 @@ import {
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { addOutline, personOutline, checkmarkCircle, albumsOutline } from 'ionicons/icons';
 import { fixUrl } from '@/composables/useImageUrl';
+import { formatAnimeType } from '@/composables/useFormatAnimeType';
 import { animeApi } from '@/api/anime';
 import { trackingApi } from '@/api/tracking';
 import { listsApi } from '@/api/lists';

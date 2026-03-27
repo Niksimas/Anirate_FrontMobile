@@ -52,6 +52,8 @@ export interface AnimeResponse {
   status?: string | null;
   episodes_count?: number | null;
   genres?: GenreResponse[];
+  avg_score?: number | null;
+  score_count?: number;
   created_at: string;
 }
 
@@ -180,6 +182,7 @@ export interface SharedListBrief {
   owner_id: number;
   member_count?: number;
   anime_count?: number;
+  preview_images?: string[];
 }
 
 export interface SharedListResponse {
@@ -220,6 +223,7 @@ export interface ListAnimeResponse {
   image_url: string;
   season?: string | null;
   year?: number | null;
+  anime_type?: string | null;
   added_by: number;
   added_at: string;
   ratings?: RatingResponse[];

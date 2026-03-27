@@ -34,7 +34,7 @@
           <img :src="fixUrl(anime.image_url)" :alt="anime.title" class="result-thumb" />
           <div class="result-meta">
             <p class="result-title">{{ anime.title }}</p>
-            <p class="result-sub">{{ [anime.season, anime.year].filter(Boolean).join(' · ') }}</p>
+            <p class="result-sub">{{ [formatAnimeType(anime.anime_type), anime.season, anime.year].filter(Boolean).join(' · ') }}</p>
           </div>
           <button
             class="add-btn"
@@ -70,6 +70,7 @@ import { IonPage, IonContent, IonSkeletonText, IonIcon } from '@ionic/vue';
 import { addCircleOutline, checkmarkCircle, searchOutline } from 'ionicons/icons';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { fixUrl } from '@/composables/useImageUrl';
+import { formatAnimeType } from '@/composables/useFormatAnimeType';
 import { animeApi } from '@/api/anime';
 import { listsApi } from '@/api/lists';
 import type { AnimeResponse, ListAnimeResponse } from '@/types';

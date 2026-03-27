@@ -2,10 +2,10 @@
   <div class="anime-card" @click="$emit('click')">
     <div class="anime-card__poster">
       <img :src="fixUrl(anime.image_url)" :alt="anime.title" loading="lazy" />
-      <div class="anime-card__overlay">
-        <span class="anime-card__score">8.9/10</span>
-        <span v-if="anime.year" class="anime-card__year">{{ anime.year }}</span>
-      </div>
+      <span class="anime-card__score">
+        {{ anime.avg_score != null ? anime.avg_score.toFixed(1) : '—' }}
+      </span>
+      <span v-if="anime.year" class="anime-card__year">{{ anime.year }}</span>
       <div v-if="trackingStatus" class="anime-card__badge" :class="`badge--${trackingStatus}`">
         {{ statusLabel }}
       </div>
@@ -59,28 +59,32 @@ const statusLabel = computed(() => {
   display: block;
 }
 
-.anime-card__overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 8px 8px 28px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
-}
-
 .anime-card__score {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   font-size: 0.72rem;
   font-weight: 700;
   color: #FFFFFF;
 }
 
 .anime-card__year {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   font-size: 0.72rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.85);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .anime-card__badge {

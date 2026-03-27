@@ -83,8 +83,8 @@
           <div class="anime-body">
             <div class="anime-meta">
               <p class="anime-name">{{ item.title }}</p>
-              <p v-if="item.season || item.year" class="anime-season">
-                {{ [item.season, item.year].filter(Boolean).join(' / ') }}
+              <p v-if="item.anime_type || item.season || item.year" class="anime-season">
+                {{ [formatAnimeType(item.anime_type), item.season, item.year].filter(Boolean).join(' · ') }}
               </p>
             </div>
 
@@ -216,6 +216,7 @@ import {
 import RateAnimeSheet from '@/components/RateAnimeSheet.vue';
 import AddAnimeSheet from '@/components/AddAnimeSheet.vue';
 import { fixUrl } from '@/composables/useImageUrl';
+import { formatAnimeType } from '@/composables/useFormatAnimeType';
 import { listsApi } from '@/api/lists';
 import { trackingApi } from '@/api/tracking';
 import { useAuthStore } from '@/stores/auth';

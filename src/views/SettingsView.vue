@@ -1,66 +1,93 @@
 <template>
   <ion-page>
     <ion-content class="settings-content" :fullscreen="true">
-      <!-- Top bar: Отмена / Готово -->
+      <!-- Top bar -->
       <div class="top-bar">
-        <ion-button fill="clear" class="top-action-btn" @click="cancel">Отмена</ion-button>
-        <ion-button fill="clear" class="top-action-btn done-btn" :disabled="saving" @click="save">
-          {{ saving ? '...' : 'Готово' }}
-        </ion-button>
+        <button class="top-btn" @click="cancel">Отмена</button>
+        <button
+          class="top-btn top-btn--done"
+          :disabled="!fullName.trim() || saving"
+          @click="save"
+        >{{ saving ? '...' : 'Готово' }}</button>
       </div>
 
-      <!-- Avatar + fields row -->
-      <div class="avatar-fields-row">
+      <!-- Avatar -->
+      <div class="avatar-section">
         <div class="avatar-circle">
           <img v-if="picture" :src="fixUrl(picture)" class="avatar-img" />
-          <ion-icon v-else :icon="cameraOutline" class="avatar-icon" />
-        </div>
-        <div class="fields-stack">
-          <div class="field-wrap">
-            <input v-model="firstName" placeholder="Имя" class="field-input" />
-            <div class="field-line" />
-          </div>
-          <div class="field-wrap">
-            <input v-model="lastName" placeholder="Фамилия" class="field-input" />
-            <div class="field-line" />
-          </div>
+          <ion-icon v-else :icon="personOutline" class="avatar-icon" />
         </div>
       </div>
 
-      <!-- Additional fields -->
-      <div class="fields-section">
-        <div class="field-wrap">
-          <input v-model="bio" placeholder="Немного о себе..." class="field-input" />
-          <div class="field-line" />
-        </div>
-        <div class="field-wrap">
-          <input v-model="username" placeholder="@username" class="field-input" />
-          <div class="field-line" />
-        </div>
+      <!-- Name field -->
+      <div class="field-section">
+        <label class="field-label">Имя</label>
+        <input
+          v-model="fullName"
+          class="field-input"
+          placeholder="Имя Фамилия"
+          maxlength="60"
+        />
       </div>
 
-      <!-- Toggle card -->
+      <!-- Privacy toggle -->
       <div class="toggle-card">
-        <span class="toggle-label">Видимость личных оценок</span>
+        <div class="toggle-info">
+          <span class="toggle-label">Видимость личных оценок</span>
+          <span class="toggle-hint">Друзья смогут видеть ваш трекинг</span>
+        </div>
         <ion-toggle v-model="isPublic" class="compact-toggle" />
       </div>
 
-      <div class="bottom-section">
-        <ion-button expand="block" fill="clear" class="logout-btn" @click="logout">
+      <!-- Danger zone -->
+      <div class="danger-section">
+        <button class="danger-btn" @click="confirmLogout = true">
           Выйти из аккаунта
-        </ion-button>
+        </button>
+        <!-- <button class="danger-btn danger-btn--delete" @click="confirmDelete = true">
+          Удалить аккаунт
+        </button> -->
       </div>
 
-      <ion-toast :is-open="toastOpen" :message="toastMsg" :duration="2000" @did-dismiss="toastOpen = false" />
+      <p class="version-text">АниРейт v1.0.0</p>
     </ion-content>
+
+    <!-- Logout confirmation -->
+    <ion-alert
+      :is-open="confirmLogout"
+      header="Выйти из аккаунта"
+      message="Вы уверены, что хотите выйти?"
+      :buttons="logoutAlertButtons"
+      @did-dismiss="confirmLogout = false"
+    />
+
+    <!-- Delete account confirmation -->
+    <ion-alert
+      :is-open="confirmDelete"
+      header="Удалить аккаунт"
+      message="Все данные будут удалены безвозвратно. Это действие нельзя отменить."
+      :buttons="deleteAlertButtons"
+      @did-dismiss="confirmDelete = false"
+    />
+
+    <!-- Unsaved changes alert -->
+    <ion-alert
+      :is-open="showUnsavedAlert"
+      header="Несохранённые изменения"
+      message="Вы уверены, что хотите выйти без сохранения?"
+      :buttons="unsavedAlertButtons"
+      @did-dismiss="showUnsavedAlert = false"
+    />
+
+    <ion-toast :is-open="toastOpen" :message="toastMsg" :duration="2000" @did-dismiss="toastOpen = false" />
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { IonPage, IonContent, IonButton, IonIcon, IonToggle, IonToast } from '@ionic/vue';
-import { cameraOutline } from 'ionicons/icons';
+import { IonPage, IonContent, IonIcon, IonToggle, IonToast, IonAlert } from '@ionic/vue';
+import { personOutline } from 'ionicons/icons';
 import { fixUrl } from '@/composables/useImageUrl';
 import { api } from '@/api/axios';
 import { useAuthStore } from '@/stores/auth';
@@ -69,43 +96,56 @@ import type { UserUpdate } from '@/types';
 const router = useRouter();
 const authStore = useAuthStore();
 
-const firstName = ref('');
-const lastName = ref('');
-const bio = ref('');
-const username = ref('');
+const fullName = ref('');
 const picture = ref('');
 const isPublic = ref(false);
 const saving = ref(false);
 const toastOpen = ref(false);
 const toastMsg = ref('');
+const confirmLogout = ref(false);
+const confirmDelete = ref(false);
+const showUnsavedAlert = ref(false);
+
+// Store initial values for dirty check
+let initialName = '';
+let initialPublic = false;
 
 onMounted(() => {
   const user = authStore.user;
   if (user) {
-    const parts = (user.full_name ?? '').split(' ');
-    firstName.value = parts[0] ?? '';
-    lastName.value = parts.slice(1).join(' ');
+    fullName.value = user.full_name ?? '';
     picture.value = user.picture ?? '';
     isPublic.value = user.is_public_profile ?? false;
-    username.value = user.email?.split('@')[0] ?? '';
+    initialName = fullName.value;
+    initialPublic = isPublic.value;
   }
 });
 
-function cancel() { router.back(); }
+const isDirty = computed(() =>
+  fullName.value !== initialName || isPublic.value !== initialPublic
+);
+
+function cancel() {
+  if (isDirty.value) {
+    showUnsavedAlert.value = true;
+  } else {
+    router.back();
+  }
+}
 
 async function save() {
   saving.value = true;
   try {
-    const fullName = [firstName.value.trim(), lastName.value.trim()].filter(Boolean).join(' ');
     const payload: UserUpdate = {
-      full_name: fullName || null,
+      full_name: fullName.value.trim() || null,
       is_public_profile: isPublic.value,
     };
     await api.put('/api/v1/users/me', payload);
     await authStore.fetchMe();
+    initialName = fullName.value;
+    initialPublic = isPublic.value;
     toastMsg.value = 'Сохранено';
     toastOpen.value = true;
-    setTimeout(() => router.back(), 1200);
   } catch {
     toastMsg.value = 'Ошибка сохранения';
     toastOpen.value = true;
@@ -118,6 +158,32 @@ async function logout() {
   await authStore.logout();
   await router.replace('/login');
 }
+
+async function deleteAccount() {
+  try {
+    await api.delete('/api/v1/users/me');
+    await authStore.logout();
+    await router.replace('/login');
+  } catch {
+    toastMsg.value = 'Ошибка удаления';
+    toastOpen.value = true;
+  }
+}
+
+const logoutAlertButtons = [
+  { text: 'Отмена', role: 'cancel' },
+  { text: 'Выйти', role: 'destructive', handler: logout },
+];
+
+const deleteAlertButtons = [
+  { text: 'Отмена', role: 'cancel' },
+  { text: 'Удалить', role: 'destructive', handler: deleteAccount },
+];
+
+const unsavedAlertButtons = [
+  { text: 'Остаться', role: 'cancel' },
+  { text: 'Выйти без сохранения', role: 'destructive', handler: () => router.back() },
+];
 </script>
 
 <style scoped>
@@ -125,98 +191,121 @@ async function logout() {
   --background: #1E1E1E;
 }
 
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
 .top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: calc(env(safe-area-inset-top) + 12px) 8px 8px;
+  padding: calc(env(safe-area-inset-top) + 12px) 16px 8px;
 }
 
-.top-action-btn {
-  --color: rgba(255,255,255,0.7);
+.top-btn {
+  background: none;
+  border: none;
   font-size: 15px;
-  --padding-start: 8px;
-  --padding-end: 8px;
+  font-family: inherit;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 8px 4px;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.done-btn { --color: #FFFFFF; font-weight: 600; }
+.top-btn--done {
+  color: #FF9E9E;
+  font-weight: 600;
+}
 
-/* Avatar + first field */
-.avatar-fields-row {
+.top-btn--done:disabled {
+  opacity: 0.4;
+}
+
+/* ── Avatar ──────────────────────────────────────────────────────────────── */
+.avatar-section {
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 16px 16px 8px;
+  justify-content: center;
+  padding: 16px 0 24px;
 }
 
 .avatar-circle {
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  background: #4A4A5A;
+  background: #2D2D3A;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  flex-shrink: 0;
 }
 
 .avatar-img { width: 100%; height: 100%; object-fit: cover; }
-.avatar-icon { font-size: 28px; color: rgba(255,255,255,0.5); }
+.avatar-icon { font-size: 32px; color: rgba(255, 255, 255, 0.5); }
 
-.fields-stack {
-  flex: 1;
-  padding-top: 8px;
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+.field-section {
+  padding: 0 16px 16px;
 }
 
-/* Fields */
-.fields-section {
-  padding: 0 16px;
-}
-
-.field-wrap {
-  margin-bottom: 4px;
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
 }
 
 .field-input {
   width: 100%;
-  background: transparent;
+  background: #2D2D3A;
   border: none;
-  outline: none;
-  color: #FFFFFF;
+  border-radius: 12px;
+  padding: 12px 14px;
   font-size: 15px;
   font-family: inherit;
-  padding: 10px 0;
+  color: #FFFFFF;
+  outline: none;
   box-sizing: border-box;
 }
 
-.field-input::placeholder { color: rgba(255,255,255,0.3); }
-
-.field-line {
-  height: 1px;
-  background: rgba(255,255,255,0.12);
-  margin-bottom: 4px;
+.field-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
 }
 
-/* Toggle card */
+.field-input:focus {
+  box-shadow: 0 0 0 1px rgba(167, 184, 217, 0.4);
+}
+
+/* ── Toggle card ─────────────────────────────────────────────────────────── */
 .toggle-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #FFFFFF;
+  background: #2D2D3A;
   border-radius: 14px;
   padding: 14px 16px;
-  margin: 16px 16px 0;
+  margin: 0 16px;
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .toggle-label {
   font-size: 14px;
-  color: #1E1E1E;
+  color: #FFFFFF;
   font-weight: 500;
 }
 
+.toggle-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
 .compact-toggle {
-  --track-background: rgba(255,255,255,0.15);
+  --track-background: rgba(255, 255, 255, 0.15);
   --track-background-checked: #5cb85c;
   --handle-background: #FFFFFF;
   --handle-background-checked: #FFFFFF;
@@ -227,22 +316,48 @@ async function logout() {
   height: 28px;
 }
 
-/* Logout */
-.bottom-section {
-  position: fixed;
-  bottom: calc(env(safe-area-inset-bottom) + 16px);
-  left: 0;
-  right: 0;
-  padding: 0 16px;
+/* ── Danger section ──────────────────────────────────────────────────────── */
+.danger-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 24px 16px 0;
+  background: #2D2D3A;
+  border-radius: 14px;
+  overflow: hidden;
 }
 
-.logout-btn {
-  --background: #2D2D3A;
-  --background-activated: #383848;
-  --color: #FF9E9E;
-  --border-radius: 14px;
-  height: 52px;
-  font-weight: 500;
+.danger-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 14px 16px;
   font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  color: #E76F6F;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.danger-btn:active {
+  background: rgba(231, 111, 111, 0.08);
+}
+
+.danger-btn + .danger-btn {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.danger-btn--delete {
+  color: rgba(231, 111, 111, 0.6);
+}
+
+/* ── Version ─────────────────────────────────────────────────────────────── */
+.version-text {
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.2);
+  margin: 24px 0;
 }
 </style>
